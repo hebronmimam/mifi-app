@@ -118,22 +118,26 @@ class Router(private val lan: Lan, override val host: String) : Box {
     }
 
     override fun live(): JSONObject {
-        val o = get(113, timeoutMs = 3000)
+        // Rates live in cmd 402 (the router's own home page reads them there), in kbit/s.
+        val o = get(402, timeoutMs = 3000)
         return JSONObject()
-            .put("rxRate", rate(o.num("dl_flow_rate", "dl_flow_rate_4g", "realtime_rx_thrpt")))
-            .put("txRate", rate(o.num("ul_flow_rate", "ul_flow_rate_4g", "realtime_tx_thrpt")))
-            .put("bars", o.num("signal_lvl")?.toInt())
+            .put("rxRate", rate(sum(o, "dl_flow_rate", "dl_flow_rate_4g") ?: o.num("realtime_rx_thrpt")))
+            .put("txRate", rate(sum(o, "ul_flow_rate", "ul_flow_rate_4g") ?: o.num("realtime_tx_thrpt")))
             .put("t", System.currentTimeMillis())
     }
 
     override fun status(withClients: Boolean): Status {
         val sys = get(113)
         val all = JSONObject().merge(sys)
-        for (cmd in intArrayOf(402, 207, 337, 1005)) runCatching { all.merge(get(cmd)) }
+        // 402 rates, 205 radio + session counters, 207 temperature, 337/1005 month flow and unread texts.
+        for (cmd in intArrayOf(402, 205, 207, 337, 1005)) runCatching { all.merge(get(cmd)) }
         val clients = if (withClients) runCatching { clients() }.getOrNull() else null
         val wanRx = all.long("wan_rx_bytes")
         val wanTx = all.long("wan_tx_bytes")
         val used = flowBytes(all.num("sys_used_flow", "usedFlow"), all.str("usedFlowUnit"))
+        // flow_dl/flow_ul: MB since the line came up (resets on reconnect; the recorder handles that).
+        val session = sum(all, "flow_dl", "flow_ul")?.let { (it * MB).toLong() }
+        val month = all.num("mon_total_flow", "mon_download_flow")?.let { (it * MB).toLong() }
         return Status(
             kind = KIND, model = model, signedIn = true,
             battery = all.num("battery_capacity")?.toInt()?.takeIf { it in 0..100 },
@@ -144,12 +148,14 @@ class Router(private val lan: Lan, override val host: String) : Box {
             bars = all.num("signal_lvl")?.toInt(),
             rsrp = all.num("RSRP", "rsrp", "RSRP_5G"),
             snr = all.num("SINR", "sinr", "SINR_5G"),
-            rxRate = rate(all.num("dl_flow_rate", "dl_flow_rate_4g")),
-            txRate = rate(all.num("ul_flow_rate", "ul_flow_rate_4g")),
-            counter = if (wanRx != null || wanTx != null) (wanRx ?: 0) + (wanTx ?: 0) else used,
-            monthBytes = used ?: all.long("mon_download_flow"),
+            rxRate = rate(sum(all, "dl_flow_rate", "dl_flow_rate_4g")),
+            txRate = rate(sum(all, "ul_flow_rate", "ul_flow_rate_4g")),
+            counter = if (wanRx != null || wanTx != null) (wanRx ?: 0) + (wanTx ?: 0) else session ?: used,
+            monthBytes = used ?: month,
+            sessionSec = dhms(all.str("onlineDuration", "online_duration")),
             uptimeSec = all.long("runTime", "uptime", "run_time"),
-            tempC = all.num("temperature", "temp", "chip_temp"),
+            tempC = all.num("device_temperature", "temperature", "temp", "chip_temp"),
+            smsUnread = all.num("sms_unread")?.toInt(),
             ssid = all.str("ssid24", "ssid58"),
             clients = clients,
             firmware = all.str("fake_version", "software_version", "fwversion"),
@@ -198,6 +204,21 @@ class Router(private val lan: Lan, override val host: String) : Box {
 
         /** The router reports rates in kbit/s on most builds; turned into bytes per second. */
         fun rate(v: Double?): Long? = v?.let { (it * 1000 / 8).toLong() }
+
+        private const val MB = 1024.0 * 1024.0
+
+        /** The router splits some readings across fields (5G + 4G); null only when none is there. */
+        fun sum(o: JSONObject, vararg keys: String): Double? {
+            val v = keys.mapNotNull { o.num(it) }
+            return if (v.isEmpty()) null else v.sum()
+        }
+
+        /** "1-7-42-14" (days-hours-minutes-seconds) as seconds. */
+        fun dhms(s: String?): Long? {
+            val p = s?.split('-')?.map { it.trim().toLongOrNull() ?: return null } ?: return null
+            if (p.size != 4) return null
+            return ((p[0] * 24 + p[1]) * 60 + p[2]) * 60 + p[3]
+        }
 
         fun flowBytes(v: Double?, unit: String?): Long? {
             v ?: return null

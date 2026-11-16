@@ -45,12 +45,14 @@ cannot reach a plain-`http` LAN address themselves (mixed content and CORS).
 |---|---|---|
 | 80 | getBasicData | model and version, readable before sign-in |
 | 104 | wakeupHttpd | wake the web server before sign-in |
-| 113 | sys_status | SIM state |
-| 133 / 205 / 207 | getIPInfo / getData / getRuntime | WAN info, `wan_rx_bytes`/`wan_tx_bytes`, uptime |
-| 402 | getHomeInfo | `RSRP`, `wan_ip`, `ssid24`/`ssid58`, versions |
+| 113 | sys_status | SIM state, network type, operator, signal level, uptime, SSIDs |
+| 205 | getData | `RSRP`, `SINR`, `flow_dl`/`flow_ul` (MB since the line came up), `mon_total_flow` (MB), `onlineDuration` (`d-h-m-s`) |
+| 207 | getRuntime | `device_temperature` (°C), `online_duration` |
+| 402 | getHomeInfo | live rates: `dl_flow_rate` + `dl_flow_rate_4g` (and `ul_…`), kbit/s, summed |
+| 1005 | — | `sms_unread`, `mon_download_flow` |
 | 223 | getAllDevice | `dhcp_list_info[]` = hostname, mac, ip |
 | 224 / 225 | get24WifiNum / get5WifiNum | `wlan24g_wifi_info[]` = user, mac, rssi |
-| 337 / 355 | getFlow / getFlowN | `mon_download_flow`, `usedFlow`, data limit |
+| 337 / 355 | getFlow / getFlowN | `mon_download_flow` (MB, download + upload despite the name), `usedFlow`, data limit |
 | 24 | getIPBand | per-device speed limits (`datas[]` = mac, ippro, remark) |
 | 26 / 29 | getUrlData / getUrlFilterMode | website filter |
 | 12 / 13 / 14 / 16 | getSms / sendSms / deleteSms / getSmsSetting | messages |

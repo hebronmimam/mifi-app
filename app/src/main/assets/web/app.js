@@ -1065,6 +1065,8 @@ function onState(s) {
   $('[data-tabs]').inert = out || sheetOpen();
   if (out && S.tab !== 'now') nav('now');
   if (!out && S.pendingRoute) { const r = S.pendingRoute; S.pendingRoute = null; route(r); }
+  // The status-bar reading and text alerts need Android's notification permission: ask once, after the first sign-in.
+  if (!out && S.prefs && !S.prefs.notifications && !S.ui.askedNotif) { S.ui.askedNotif = 1; saveUi(); N.call('notif.request').catch(() => {}); }
   paintNow(); badge(); wantLive(); loadToday();
   if (S.tab === 'settings' && S.page === 'index') setPage('index', true);
   if (!prevNeeds && s.needsSignIn && S.tab === 'settings') setPage('index', true);
