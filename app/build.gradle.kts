@@ -63,6 +63,11 @@ android {
         buildConfig = true
     }
 
+    // dev.js is the desktop stand-in for the phone bridge; the app never needs it.
+    androidResources {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~:!dev.js"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

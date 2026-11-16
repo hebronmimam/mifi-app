@@ -25,16 +25,18 @@ class Monitor(private val app: MiFiApp) {
         if (s != null && id != null) {
             s.battery?.let { prefs.putString("lastBattery:$id", "$it|${System.currentTimeMillis()}") }
             lowBattery(s)
+            hot(s)
             if (prefs.smsNotify && s.signedIn) runCatching { messages(id, s) }
             if (prefs.recordUsage) runCatching { app.recorder.record(id, s, app.lan.myIp()) }
         }
         showStatus(s)
-        runCatching { app.updater.dailyCheck() }
+        if (prefs.autoUpdate) runCatching { app.updater.dailyCheck() }
 
         val pm = app.getSystemService(PowerManager::class.java)
+        val matters = s != null && (s.connected == false || (s.battery != null && !s.charging && s.battery <= 20))
         val minutes = when {
-            pm.isPowerSaveMode -> 15
-            s?.battery != null && !s.charging && s.battery <= 20 -> 1
+            prefs.slowInSaver && pm.isPowerSaveMode -> 15
+            prefs.fastWhenLow && matters -> 1
             else -> prefs.checkMinutes.coerceIn(1, 60)
         }
         return minutes * 60_000L
@@ -57,6 +59,21 @@ class Monitor(private val app: MiFiApp) {
         if (b <= 20 && armed && prefs.lowAlert) {
             Notifier.low(app, b)
             prefs.sp.edit().putBoolean("lowArmed", false).apply()
+        }
+    }
+
+    /** Router only: one alert above 70 °C, re-armed below 65 °C. */
+    private fun hot(s: Status) {
+        val t = s.tempC ?: return
+        val prefs = app.prefs
+        val armed = prefs.sp.getBoolean("hotArmed", true)
+        if (t < 65) {
+            if (!armed) prefs.sp.edit().putBoolean("hotArmed", true).apply()
+            return
+        }
+        if (t > 70 && armed && prefs.hotAlert) {
+            Notifier.hot(app, t.toInt())
+            prefs.sp.edit().putBoolean("hotArmed", false).apply()
         }
     }
 

@@ -29,6 +29,7 @@ interface Host {
     fun requestNotifications()
     fun requestBatteryExemption()
     fun batteryExempt(): Boolean
+    fun notificationsAllowed(): Boolean
     fun openInstallSettings()
     fun openWifiSettings()
     fun openUrl(url: String)
@@ -146,6 +147,7 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             "refresh" -> { d.refresh(a.optBoolean("clients", true)); d.state() }
             "find" -> { d.find(force = true); d.state() }
             "live" -> { live(a.optBoolean("on")); true }
+            "delay" -> app.lan.delay() ?: JSONObject.NULL
 
             "signIn" -> {
                 val pw = a.optString("password")
@@ -221,7 +223,12 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             .put("statusBar", p.statusBar)
             .put("lowAlert", p.lowAlert)
             .put("recordUsage", p.recordUsage)
+            .put("hotAlert", p.hotAlert)
+            .put("fastWhenLow", p.fastWhenLow)
+            .put("slowInSaver", p.slowInSaver)
+            .put("autoUpdate", p.autoUpdate)
             .put("batteryExempt", host.batteryExempt())
+            .put("notifications", host.notificationsAllowed())
     }
 
     private fun setPrefs(a: JSONObject) {
@@ -235,6 +242,10 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
         if (a.has("statusBar")) p.statusBar = a.getBoolean("statusBar")
         if (a.has("lowAlert")) p.lowAlert = a.getBoolean("lowAlert")
         if (a.has("recordUsage")) p.recordUsage = a.getBoolean("recordUsage")
+        if (a.has("hotAlert")) p.hotAlert = a.getBoolean("hotAlert")
+        if (a.has("fastWhenLow")) p.fastWhenLow = a.getBoolean("fastWhenLow")
+        if (a.has("slowInSaver")) p.slowInSaver = a.getBoolean("slowInSaver")
+        if (a.has("autoUpdate")) p.autoUpdate = a.getBoolean("autoUpdate")
         MonitorService.start(app)
     }
 

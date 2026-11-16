@@ -36,6 +36,26 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("recordUsage", true)
         set(v) = sp.edit().putBoolean("recordUsage", v).apply()
 
+    /** Router only: alert above 70 °C. */
+    var hotAlert: Boolean
+        get() = sp.getBoolean("hotAlert", true)
+        set(v) = sp.edit().putBoolean("hotAlert", v).apply()
+
+    /** Check every minute while the battery is low or the internet is down. */
+    var fastWhenLow: Boolean
+        get() = sp.getBoolean("fastWhenLow", true)
+        set(v) = sp.edit().putBoolean("fastWhenLow", v).apply()
+
+    /** Every 15 minutes while the phone is in battery saver. */
+    var slowInSaver: Boolean
+        get() = sp.getBoolean("slowInSaver", true)
+        set(v) = sp.edit().putBoolean("slowInSaver", v).apply()
+
+    /** Look for app updates on GitHub once a day. */
+    var autoUpdate: Boolean
+        get() = sp.getBoolean("autoUpdate", true)
+        set(v) = sp.edit().putBoolean("autoUpdate", v).apply()
+
     /** The device the app shows: "kind:model". */
     var selected: String?
         get() = sp.getString("selected", null)

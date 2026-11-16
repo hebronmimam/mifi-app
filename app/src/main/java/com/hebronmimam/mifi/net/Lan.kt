@@ -49,6 +49,25 @@ class Lan(ctx: Context) {
         return lp.linkAddresses.firstOrNull { it.address is Inet4Address }?.address?.hostAddress
     }
 
+    /**
+     * Round trip from this phone through the box to the internet, in ms: the time
+     * to open a TCP connection to a public DNS server over the Wi-Fi. Null when it fails.
+     */
+    fun delay(n: Network? = wifi()): Long? {
+        n ?: return null
+        for (host in listOf("1.1.1.1", "8.8.8.8")) {
+            val ms = runCatching {
+                n.socketFactory.createSocket().use { s ->
+                    val t = System.nanoTime()
+                    s.connect(java.net.InetSocketAddress(host, 53), 3000)
+                    (System.nanoTime() - t) / 1_000_000
+                }
+            }.getOrNull()
+            if (ms != null) return ms
+        }
+        return null
+    }
+
     fun request(
         url: String,
         method: String = "GET",

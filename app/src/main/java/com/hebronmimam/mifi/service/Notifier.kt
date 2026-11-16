@@ -26,6 +26,7 @@ object Notifier {
     const val ID_STATUS = 1
     const val ID_LOW = 2
     const val ID_UPDATE = 3
+    const val ID_HOT = 4
     private const val ID_SMS_BASE = 1000
 
     fun channels(ctx: Context) {
@@ -102,6 +103,17 @@ object Notifier {
     }
 
     fun cancelLow(ctx: Context) = nm(ctx).cancel(ID_LOW)
+
+    fun hot(ctx: Context, celsius: Int) {
+        val n = builder(ctx, CH_ALERT)
+            .setSmallIcon(R.drawable.ic_stat_mifi)
+            .setContentTitle("Router at $celsius °C")
+            .setContentText("Above 70 °C is too hot. Clear its top vents.")
+            .setAutoCancel(true)
+            .setContentIntent(open(ctx, null, ID_HOT))
+            .build()
+        nm(ctx).notify(ID_HOT, n)
+    }
 
     fun sms(ctx: Context, deviceName: String, m: Message) {
         val id = ID_SMS_BASE + (m.id.hashCode() and 0x7fff)

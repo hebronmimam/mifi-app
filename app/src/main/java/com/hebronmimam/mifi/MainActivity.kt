@@ -194,6 +194,9 @@ class MainActivity : Activity(), Host {
         }
     }
 
+    override fun notificationsAllowed(): Boolean =
+        getSystemService(android.app.NotificationManager::class.java).areNotificationsEnabled()
+
     override fun batteryExempt(): Boolean =
         getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
 

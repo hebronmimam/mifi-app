@@ -1,1 +1,130 @@
-<!doctype html><meta charset="utf-8"><title>MiFi</title><body style="background:#121212;color:#F1F1F1">MiFi</body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#121212">
+<title>MiFi</title>
+<!-- Panchang and Switzer come from Fontshare at run time (not shipped in this repo); the system font stands in offline. -->
+<link rel="preconnect" href="https://api.fontshare.com">
+<link href="https://api.fontshare.com/v2/css?f[]=panchang@300,500&f[]=switzer@400,500,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app" data-app data-mood="ok">
+
+  <div class="screen" data-screen="now"><div class="pad">
+    <button class="hero" data-act="devices" aria-label="Switch device">
+      <span class="hero-l">
+        <span class="chip hero-pill"><span class="dot"></span><span class="num" data-p="since">Looking…</span></span>
+        <span class="hero-name"><b><span data-p="name">MiFi</span><svg class="hero-sw" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></b><span data-p="link">Finding it on your Wi-Fi</span></span>
+      </span>
+      <span class="hero-art" data-p="art">
+        <svg class="art-mifi" viewBox="0 0 136 100" aria-hidden="true">
+          <g transform="rotate(-7 68 50)">
+            <rect x="9" y="17" width="118" height="74" rx="24" fill="#080808"/>
+            <rect x="5" y="11" width="118" height="74" rx="24" fill="#2B2B2B" stroke="rgba(241,241,241,.16)"/>
+            <path d="M27 12.5h74" stroke="rgba(241,241,241,.28)" stroke-linecap="round"/>
+            <rect x="121.5" y="36" width="4" height="20" rx="2" fill="#454545"/>
+            <rect x="17" y="23" width="64" height="50" rx="13" fill="#181818"/>
+            <g class="glyph" data-led>
+              <rect x="27" y="40" width="3" height="5" rx="1"/><rect x="32" y="37" width="3" height="8" rx="1"/><rect x="37" y="34" width="3" height="11" rx="1"/><rect x="42" y="31" width="3" height="14" rx="1"/>
+            </g>
+            <g class="glyph-s" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M55 37.5a10 10 0 0 1 14 0"/><path d="M58 41a5.5 5.5 0 0 1 8 0"/><circle cx="62" cy="44.5" r="1.2" class="glyph-f"/>
+            </g>
+            <rect x="27" y="54" width="26" height="11" rx="3" fill="none" stroke="#4A4A4A" stroke-width="1.5"/>
+            <rect x="54" y="57.5" width="2.5" height="4" rx="1" fill="#4A4A4A"/>
+            <rect class="lit" data-p="battfill" x="29.5" y="56.5" width="3" height="6" rx="1.5"/>
+            <circle cx="102" cy="48" r="9" fill="#232323" stroke="rgba(241,241,241,.12)"/>
+            <path d="M102 44v4.5M98.6 45.6a4.6 4.6 0 1 0 6.8 0" fill="none" stroke="#6E6E6E" stroke-width="1.5" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <svg class="art-router" viewBox="0 0 88 124" aria-hidden="true">
+          <rect x="16" y="112" width="56" height="9" rx="4.5" fill="#080808"/>
+          <rect x="13" y="3" width="62" height="112" rx="16" fill="#2B2B2B" stroke="rgba(241,241,241,.16)"/>
+          <path d="M58 4.5h3a13 13 0 0 1 13 13v79a13 13 0 0 1-13 13h-3z" fill="#242424"/>
+          <path d="M29 4.5h22" stroke="rgba(241,241,241,.28)" stroke-linecap="round"/>
+          <g stroke="#1A1A1A" stroke-width="3" stroke-linecap="round"><path d="M25 18h22M25 25h22M25 32h22M25 39h22"/></g>
+          <rect x="22" y="70" width="30" height="28" rx="8" fill="#181818"/>
+          <g class="glyph" data-led><rect x="28" y="85" width="2.5" height="4" rx="1"/><rect x="32" y="82.5" width="2.5" height="6.5" rx="1"/><rect x="36" y="80" width="2.5" height="9" rx="1"/></g>
+          <circle class="lit" cx="45" cy="84.5" r="2.4"/>
+        </svg>
+      </span>
+    </button>
+
+    <div data-live>
+      <div class="dial">
+        <svg viewBox="0 0 300 300" aria-hidden="true">
+          <circle cx="150" cy="150" r="132" fill="none" stroke="#262626" stroke-width="10"/>
+          <circle data-ring cx="150" cy="150" r="132" fill="none" stroke="var(--state)" stroke-width="10" stroke-linecap="round"
+            stroke-dasharray="829.4" stroke-dashoffset="829.4" transform="rotate(-90 150 150)" style="transition:stroke-dashoffset .6s"/>
+          <g data-ticks></g>
+        </svg>
+        <div class="mid">
+          <div class="speed num" data-p="down">0.0</div>
+          <div class="unit">Mbps downloading now</div>
+        </div>
+      </div>
+      <p class="a-batt"><b class="num" data-p="pct">—</b> <span data-p="battline"></span></p>
+      <canvas class="trace" data-trace width="684" height="128" role="img" aria-label="Speed over the last minute"></canvas>
+      <div class="legend"><span><i style="background:var(--ok)"></i>Download</span><span><i style="background:var(--up)"></i>Upload</span><span class="sp"></span><span>last 60 s</span></div>
+      <div class="stat3">
+        <div><span>Signal</span><b data-p="sigword">—</b><span class="num" data-p="sig"></span></div>
+        <div><span>Delay</span><b class="num" data-p="ping">—</b><span>to the internet</span></div>
+        <div><span>Today</span><b class="num" data-p="today">—</b><span>used</span></div>
+      </div>
+    </div>
+    <div data-nowstate hidden></div>
+  </div></div>
+
+  <div class="screen" data-screen="msgs" hidden><div class="pad" data-msgs></div></div>
+
+  <div class="screen" data-screen="usage" hidden>
+    <div class="pad">
+      <h3 class="scr">Usage</h3>
+      <div class="seg" role="group" aria-label="Period" data-uperiod>
+        <button aria-pressed="false" data-u="day">Day</button><button aria-pressed="false" data-u="week">Week</button><button aria-pressed="true" data-u="month">Month</button><button aria-pressed="false" data-u="year">Year</button><button aria-pressed="false" data-u="all">All</button>
+      </div>
+      <div class="u-total">
+        <b class="num" data-q="u-total">—</b>
+        <span data-q="u-sub"></span>
+      </div>
+      <p class="u-read num" data-q="u-read" aria-live="polite"></p>
+      <svg class="u-chart" data-q="u-chart" viewBox="0 0 342 96" preserveAspectRatio="none" role="img" aria-label="Data used"></svg>
+      <div class="axis" data-q="u-axis"></div>
+
+      <div class="sec">Where it went</div>
+      <div class="u-split">
+        <div><span class="t"><b>This phone</b><span>Counted exactly by Android</span></span><b class="num" data-q="u-phone">—</b><i class="u-bar"><i data-q="u-phonebar" style="width:0"></i></i></div>
+        <div><span class="t"><b>Everything else</b><span data-q="u-restsub">The MiFi counts these together</span></span><b class="num" data-q="u-rest">—</b><i class="u-bar"><i data-q="u-restbar" style="width:0"></i></i></div>
+      </div>
+
+      <div class="sec">Yours</div>
+      <div class="list" data-q="u-yours"></div>
+      <div class="sec">Others</div>
+      <div class="list" data-q="u-others"></div>
+      <p class="mp-note" data-q="u-note"></p>
+      <div class="mp-actions"><button class="btn ghost" data-act="export">Export the record</button></div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="settings" hidden><div class="pad" data-pset></div></div>
+
+  <nav class="tabbar" data-tabs aria-label="Screens">
+    <button data-go="now" aria-current="page"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 12l4-3"/></svg>Now</button>
+    <button data-go="msgs" aria-label="Messages"><span class="tb-ico"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16v10H8l-4 4z"/></svg><span class="badge num" data-badge hidden></span></span>Messages</button>
+    <button data-go="usage"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 19V13M10 19V6M15 19V10M20 19V15"/></svg>Usage</button>
+    <button data-go="settings"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Settings</button>
+  </nav>
+  <div class="scrim" data-scrim></div>
+  <div class="sheet" data-sheetbox role="dialog" aria-modal="true" inert><div class="grab"></div><div data-sheetbody></div></div>
+  <div class="toast" data-toast role="status" aria-live="polite"></div>
+</div>
+<script>
+  // Inside the app the phone injects MiFiNative. In a desktop browser, a stand-in with made-up data loads instead.
+  if (!window.MiFiNative) document.write('<script src="dev.js"><\/script>');
+</script>
+<script src="app.js"></script>
+</body>
+</html>
