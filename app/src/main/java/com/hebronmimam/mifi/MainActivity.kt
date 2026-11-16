@@ -177,8 +177,17 @@ class MainActivity : Activity(), Host {
         web.performHapticFeedback(c)
     }
 
+    private var notifAskWaiting = false
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && notifAskWaiting) { notifAskWaiting = false; requestNotifications() }
+    }
+
     override fun requestNotifications() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // Asked while the app is still coming up, Android drops the prompt; wait for the window.
+            if (!hasWindowFocus()) { notifAskWaiting = true; return }
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQ_NOTIF)
         } else {
             bridge.event("permission", JSONObject().put("notifications", true))
