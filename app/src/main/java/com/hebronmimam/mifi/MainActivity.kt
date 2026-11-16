@@ -81,10 +81,10 @@ class MainActivity : Activity(), Host {
         ViewCompat.setOnApplyWindowInsetsListener(web) { v, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-            // The status bar is padded natively; the bottom (gesture bar, keyboard) goes to CSS.
-            v.setPadding(sys.left, sys.top, sys.right, 0)
+            // WebView ignores its own padding, so every edge goes to CSS (sides are 0 in portrait).
             val d = resources.displayMetrics.density
             val o = JSONObject()
+                .put("top", Math.ceil((sys.top / d).toDouble()).toInt())
                 .put("bottom", (sys.bottom / d).toInt())
                 .put("ime", (ime.bottom / d).toInt())
             bridge.insets = o

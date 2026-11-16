@@ -169,6 +169,7 @@ function openSheet(html) {
 function closeSheet() {
   $('[data-sheetbox]').inert = true;
   $$('[data-screen], [data-tabs]').forEach(e => e.inert = false);
+  $('[data-tabs]').inert = app.classList.contains('out');
   $('[data-sheetbox]').classList.remove('open'); $('[data-scrim]').classList.remove('open');
   S.confirm = null;
   document.activeElement?.blur?.();
@@ -193,7 +194,7 @@ function reading() {
 }
 
 function mood() {
-  if (!viewIsHere() || !st().status) return 'idle';
+  if (!viewIsHere() || !st().status || st().needsSignIn || st().problem) return 'idle';
   const r = reading();
   if (r.connected === false) return 'bad';
   if (isRouter() || r.battery == null) return 'ok';
@@ -229,8 +230,7 @@ function paintNow() {
   }
   p('since').textContent = since;
   p('link').innerHTML = link;
-  p('name').textContent = devName();
-  p('name').parentNode.classList.toggle('long', devName().length > 9);
+  if (p('name').textContent !== devName()) { p('name').textContent = devName(); fitName(); }
   p('art').classList.toggle('router', router);
   $$('[data-led]').forEach(g => g.classList.toggle('on', isHere && r.connected !== false && !!st().status));
   p('battfill').setAttribute('width', Math.max(2, 21 * (r.battery || 0) / 100).toFixed(1));
@@ -252,6 +252,14 @@ function paintNow() {
   p('today').textContent = S.today != null ? fmt(S.today) : '—';
   paintNowState();
 }
+
+/** The name steps down the type scale (20, 16, 14) until it fits beside the picture. */
+function fitName() {
+  const s = p('name'), b = s.parentNode;
+  for (const px of [20, 16, 14]) { b.style.fontSize = px + 'px'; if (s.scrollWidth <= s.clientWidth) break; }
+}
+document.fonts?.ready.then(fitName);
+addEventListener('resize', fitName);
 
 /** When the box can't be shown live, the dial gives way to one clear next step. */
 function paintNowState() {
@@ -1051,6 +1059,12 @@ function onState(s) {
     N.call('device.rename', { id: s.id, name: ssid }).then(onState).catch(() => {});
   }
   if (s.id !== prevId || s.needsSignIn !== prevNeeds) { S.Dfor = null; S.todayAt = 0; }
+  // The tabs come only after sign-in; until then the Now screen (and its sign-in form) is the app.
+  const out = !(s.signedIn && !s.needsSignIn);
+  app.classList.toggle('out', out);
+  $('[data-tabs]').inert = out || sheetOpen();
+  if (out && S.tab !== 'now') nav('now');
+  if (!out && S.pendingRoute) { const r = S.pendingRoute; S.pendingRoute = null; route(r); }
   paintNow(); badge(); wantLive(); loadToday();
   if (S.tab === 'settings' && S.page === 'index') setPage('index', true);
   if (!prevNeeds && s.needsSignIn && S.tab === 'settings') setPage('index', true);
@@ -1084,12 +1098,14 @@ N.on('back', () => {
 function setInsets(d) {
   if (!d) return;
   app.style.setProperty('--sb', `${d.bottom || 0}px`);
+  if (d.top != null) app.style.setProperty('--st', `${d.top}px`);
   app.style.setProperty('--ime', `${d.ime || 0}px`);
   app.classList.toggle('kb', (d.ime || 0) > 0);
 }
 
 function route(r) {
   if (!r) return;
+  if (app.classList.contains('out') || !S.st) { S.pendingRoute = r; return; }
   if (r.startsWith('msg:')) { nav('msgs'); openMsg(r.slice(4)); }
   else if (r.startsWith('settings:')) { nav('settings'); setPage(r.slice(9)); }
 }
