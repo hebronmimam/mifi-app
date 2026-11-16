@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Only what is listed goes: the usage history and settings. The stored device
+     password (secrets.xml) is never listed, so it never leaves the phone. -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="usage.db" />
         <include domain="sharedpref" path="prefs.xml" />
-        <exclude domain="sharedpref" path="secrets.xml" />
     </cloud-backup>
     <device-transfer>
         <include domain="database" path="usage.db" />
         <include domain="sharedpref" path="prefs.xml" />
-        <exclude domain="sharedpref" path="secrets.xml" />
     </device-transfer>
 </data-extraction-rules>
