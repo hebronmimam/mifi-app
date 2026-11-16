@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. Usage history and settings are backed up; the stored
+     device password never leaves the phone (its key lives in the Keystore). -->
+<full-backup-content>
+    <include domain="database" path="usage.db" />
+    <include domain="sharedpref" path="prefs.xml" />
+    <exclude domain="sharedpref" path="secrets.xml" />
+</full-backup-content>

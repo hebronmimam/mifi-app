@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MiFi</string>
+    <string name="ch_status">Battery in the status bar</string>
+    <string name="ch_status_desc">Keeps the battery level of your MiFi in the status bar.</string>
+    <string name="ch_sms">Messages</string>
+    <string name="ch_sms_desc">New text messages that arrive on the MiFi or router SIM.</string>
+    <string name="ch_alert">Low battery</string>
+    <string name="ch_alert_desc">When the MiFi battery runs low.</string>
+    <string name="ch_update">Updates</string>
+    <string name="ch_update_desc">A new version of this app is ready to install.</string>
+</resources>
