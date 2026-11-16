@@ -68,7 +68,7 @@ object Notifier {
             .setOnlyAlertOnce(true)
             .setContentIntent(open(ctx, null, 0))
             .setColor(0xFFBCF500.toInt())
-        if (Build.VERSION.SDK_INT >= 23) b.setSmallIcon(Icon.createWithBitmap(numberIcon(percent)))
+        if (Build.VERSION.SDK_INT >= 23 && percent != null) b.setSmallIcon(Icon.createWithBitmap(numberIcon(percent)))
         else b.setSmallIcon(R.drawable.ic_stat_mifi)
         if (Build.VERSION.SDK_INT < 26) @Suppress("DEPRECATION") b.setPriority(Notification.PRIORITY_LOW)
         if (Build.VERSION.SDK_INT >= 31) b.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)

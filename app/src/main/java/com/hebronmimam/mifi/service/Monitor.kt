@@ -120,7 +120,8 @@ class Monitor(private val app: MiFiApp) {
             s.clients?.let { parts += if (it.size == 1) "1 device" else "${it.size} devices" }
             if (!s.signedIn) parts += "Sign in to see more"
             val title = if (s.battery != null) "$name · ${s.battery}%" + (if (s.charging) " · charging" else "") else name
-            val percent = if (s.kind == Mifi.KIND || s.battery != null) s.battery else null
+            // The number is the icon only while "Battery in the status bar" is on; otherwise the app's own icon.
+            val percent = if (app.prefs.statusBar && (s.kind == Mifi.KIND || s.battery != null)) s.battery else null
             return Notifier.status(ctx, percent, title, parts.joinToString(" · ").ifEmpty { "Connected" })
         }
     }

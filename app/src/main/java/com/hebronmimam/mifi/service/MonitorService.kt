@@ -71,7 +71,7 @@ class MonitorService : Service() {
 
         fun wanted(ctx: Context): Boolean {
             val p = (ctx.applicationContext as MiFiApp).prefs
-            return p.statusBar || p.smsNotify || p.lowAlert || p.recordUsage
+            return p.statusBar || p.smsNotify || p.lowAlert || p.recordUsage || p.hotAlert
         }
 
         /** Start (or nudge) the service. Safe to call from the foreground or from boot. */
