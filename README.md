@@ -186,7 +186,13 @@ Found a problem, or want the app to do something new? Message me on [WhatsApp](h
 
 I'm [Hebronmimam](https://hebronmimam.com), a WordPress systems designer and developer in Calabar, Nigeria. Most days I build Bricks and WordPress sites for agencies and businesses, and [Mimam's Var](https://mv.hebronmimam.com), a design system plugin for Bricks.
 
-I made this app because I wanted my MiFi's battery in my status bar without opening a web page. If you have a site to build or fix, [hebronmimam.com](https://hebronmimam.com) is where to start.
+This app started small. I only wanted to know how much battery my MiFi had left without picking it up or opening its web page. So the first idea was just that: the percentage, in my status bar.
+
+Then I kept wanting more. I wanted to see how fast the internet was right now, so live speed came in. The texts and balance replies sat on the MiFi where I never saw them, so they started arriving on my phone like any other message. I wanted to know which device was using the data, so usage came in, day by day and device by device. Every setting I used to pinch and zoom for on the MiFi's page moved into the app too. I also use a home router, so the app learned that as well.
+
+That's how a battery percentage became the app it is now: everything I do with my MiFi and router, in one place on my phone. I built it for myself first, and I'm sharing it so you can use it too.
+
+If you have a site to build or fix, [hebronmimam.com](https://hebronmimam.com) is where to start.
 
 ## Credits
 
