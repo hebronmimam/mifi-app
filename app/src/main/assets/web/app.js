@@ -237,7 +237,11 @@ function paintNow() {
 
   const ring = router ? sigPct(r.rsrp, r.bars) : (r.battery ?? 0);
   $('[data-ring]').setAttribute('stroke-dashoffset', (829.4 * (1 - (isHere ? ring : 0) / 100)).toFixed(1));
-  p('down').textContent = isHere && r.connected !== false ? mbps(r.rx).toFixed(1) : '0.0';
+  // The box adds to its counters in bursts, so one second reads 2 Mbps and the next 25: show the last 3 s averaged.
+  const on = isHere && r.connected !== false;
+  const avg = k => S.liveOn ? S.hist.slice(-3).reduce((a, v) => a + v[k], 0) / 3 : mbps(k ? r.tx : r.rx);
+  p('down').textContent = on ? avg(0).toFixed(1) : '0.0';
+  p('up').textContent = on ? avg(1).toFixed(1) : '0.0';
   if (router) {
     p('pct').textContent = isHere ? `${ring}%` : '—';
     p('battline').textContent = s.tempC != null ? `signal, router at ${Math.round(s.tempC)} °C` : 'signal, plugged in';
@@ -405,8 +409,28 @@ function nav(id) {
   if (id === 'msgs') { S.msg = null; renderMsgs(); loadMsgs(); }
   if (id === 'usage') loadUsage();
   if (id === 'settings') setPage('index');
+  lensTo($(`[data-go="${id}"]`, tabsEl), true);
   wantLive();
 }
+
+// The tab lens (master components 10). It appears in place the first time and after a layout change, and glides on a pick.
+const tabsEl = $('[data-tabs]'), lensEl = document.createElement('span');
+lensEl.className = 'tb-lens'; lensEl.setAttribute('aria-hidden', 'true'); tabsEl.prepend(lensEl);
+let lensTimer = 0;
+function lensTo(b, glide) {
+  if (!b || !b.offsetWidth) return; // the bar is hidden (signed out, keyboard up): placed when it shows
+  const place = () => { tabsEl.style.setProperty('--lens-x', `${b.offsetLeft}px`); tabsEl.style.setProperty('--lens-w', `${b.offsetWidth}px`); };
+  clearTimeout(lensTimer);
+  if (!glide || !tabsEl.dataset.lens) {
+    tabsEl.dataset.lensJump = ''; place(); tabsEl.dataset.lens = 'park';
+    lensEl.getBoundingClientRect();
+    requestAnimationFrame(() => delete tabsEl.dataset.lensJump);
+    return;
+  }
+  place(); tabsEl.dataset.lens = 'on';
+  lensTimer = setTimeout(() => { tabsEl.dataset.lens = 'park'; }, 600);
+}
+new ResizeObserver(() => lensTo($('[aria-current="page"]', tabsEl))).observe(tabsEl);
 
 // ---------- messages ----------
 async function loadMsgs() {
