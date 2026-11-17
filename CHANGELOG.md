@@ -2,6 +2,12 @@
 
 All notable changes to this app. Versions follow [semantic versioning](https://semver.org).
 
+## [1.1.3] - 2026-11-17
+
+- Usage: Year and All now include everything the box counted this month, not only what the app recorded since it was installed. Before, a year could show less than its own month. When the box's month starts on the 1st, this month's bar is the box's own count, and the line under the total says so.
+- The tab bar: each tab is sized to its label, so the highlight never touches a long one like "Messages".
+- Lists fade out just above the tab bar instead of running under it and showing below it.
+
 ## [1.1.2] - 2026-11-17
 
 - Usage: a router could show tens of GB too many for one hour. When one of its readings fell back to another of its counters, the app took the difference as data. Readings now only compare with the same counter, a counter going down only counts as a restart when the box really restarted, and no jump faster than 4G is counted. Hours already recorded above 20 GB keep only this phone's exact share.

@@ -699,18 +699,30 @@ function renderUsage(U) {
     return;
   }
   const { sl, rows, devs } = U, since = S.info?.since ? H(S.info.since) : Infinity;
+  const from = S.info?.since ? new Date(S.info.since) : null, sd = +status().raw?.startDate;
+  const boxNow = viewIsHere() ? status().monthBytes : null;
+  // A year (or everything) holds this month, and the box counted this month from before the app did. When the box's
+  // month starts on the 1st, the two line up, so this month's share is the box's figure, not just the app's record.
+  let extra = 0;
+  if (boxNow != null && (S.per === 'year' || S.per === 'all') && !(sd > 1)) {
+    const now = new Date(), m0 = H(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
+    extra = Math.max(0, boxNow - rows.filter(x => x[0] >= m0).reduce((a, x) => a + x[1], 0));
+  }
   const vals = sl.out.map(s => {
-    if (s.future || s.b <= since) return undefined;
+    const add = s.live ? extra : 0;
+    if (s.future || (s.b <= since && !add)) return undefined;
     const r = rows.filter(x => x[0] >= s.a && x[0] < s.b);
-    if (!r.length) return s.live ? undefined : null;
-    return r.reduce((a, x) => a + x[1], 0);
+    if (!r.length) return add || (s.live ? undefined : null);
+    return r.reduce((a, x) => a + x[1], 0) + add;
   });
-  const total = rows.reduce((a, x) => a + x[1], 0), phone = Math.min(total, rows.reduce((a, x) => a + x[2], 0));
+  const recorded = rows.reduce((a, x) => a + x[1], 0), total = recorded + extra, phone = Math.min(total, rows.reduce((a, x) => a + x[2], 0));
   // This month comes from the box's own counter, which ran before the app did. Other periods are the app's record.
-  const boxMonth = S.per === 'month' && viewIsHere() ? status().monthBytes : null;
+  const boxMonth = S.per === 'month' ? boxNow : null;
   const fromBox = boxMonth != null && boxMonth >= total, shown = fromBox ? boxMonth : total;
-  if (fromBox) {
-    const from = S.info?.since ? new Date(S.info.since) : null, sd = +status().raw?.startDate;
+  if (extra) {
+    q('u-total').textContent = fmt(total);
+    q('u-sub').textContent = `${S.per === 'all' ? 'Everything' : 'This year'} on ${devName()}. ${MON[new Date().getMonth()]} is the ${w}’s own count; the app recorded the rest${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;
+  } else if (fromBox) {
     q('u-total').textContent = fmt(boxMonth);
     q('u-sub').textContent = `This month, counted by the ${w}${sd > 1 ? ` since its reset on the ${ord(sd)}` : ''}. The app recorded ${fmt(total)} of it${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;
   } else {
@@ -718,7 +730,7 @@ function renderUsage(U) {
     q('u-sub').textContent = `${PW[S.per][0].toUpperCase()}${PW[S.per].slice(1)} on ${devName()}, recorded by the app${rows.length ? '' : '. Nothing recorded for this period'}`;
   }
   q('u-phone').textContent = fmt(phone); q('u-rest').textContent = fmt(shown - phone);
-  q('u-restsub').textContent = fromBox && boxMonth > total ? `All other use, including before the app started recording` : `The ${w} counts these together`;
+  q('u-restsub').textContent = (fromBox && boxMonth > total) || extra ? `All other use, including before the app started recording` : `The ${w} counts these together`;
   q('u-phonebar').style.width = shown ? `${phone / shown * 100}%` : '0';
   q('u-restbar').style.width = shown ? `${(shown - phone) / shown * 100}%` : '0';
   q('u-axis').innerHTML = sl.axis.map(a => `<span>${esc(a)}</span>`).join('');
