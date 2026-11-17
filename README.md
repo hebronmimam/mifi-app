@@ -32,6 +32,15 @@
 
 <p align="center"><sub>Screenshots use made-up demo data.</sub></p>
 
+## Before and after
+
+The same MiFi, on the same phone, a minute apart.
+
+| Before: the box's own page at `192.168.0.1` | After: this app |
+|---|---|
+| <img src="docs/screenshots/before-web-page.png" width="320" alt="The MiFi's own web page in Chrome on a phone: a desktop layout shrunk to fit, small text and buttons, no battery percentage"> | <img src="docs/screenshots/after-app.png" width="320" alt="The app on the same phone: battery at 73% and charging, download 5.9 Mbps, upload 1.0 Mbps, and the last minute as a chart"> |
+| A desktop page shrunk to fit. You pinch to read it, and the battery is a tiny icon with no number. | The battery as a number, live speed, and everything else one tap away. |
+
 ## Features
 
 | Feature | What it does |
@@ -64,6 +73,10 @@ The app is not on the Play Store. Every release is built from this repository an
 | Other ZTE MiFis with the same web page | Likely to work. [Tell me](#feedback-and-feature-requests) how it goes. |
 
 If your box isn't listed, the app says so instead of guessing. Feature requests for other boxes are welcome.
+
+### Make it work with your box
+
+Every box speaks its own web API, so I need one in my hands to add it. You can buy me one of the same model, or post me your own and I'll send it back when the app supports it. [Message me first](#feedback-and-feature-requests) so we can agree on the model and the details before anything is sent.
 
 ## How it works
 
@@ -169,9 +182,17 @@ Bug reports, device reports and pull requests are welcome. Read [CONTRIBUTING.md
 
 Found a problem, or want the app to do something new? Message me on [WhatsApp](https://wa.me/2348149322169) or [Facebook](https://www.facebook.com/hebronmimam), or [open an issue](https://github.com/hebronmimam/mifi-app/issues/new/choose).
 
+## Who made this
+
+I'm [Hebronmimam](https://hebronmimam.com), a WordPress systems designer and developer in Calabar, Nigeria. Most days I build Bricks and WordPress sites for agencies and businesses, and [Mimam's Var](https://mv.hebronmimam.com), a design system plugin for Bricks.
+
+I made this app because I wanted my MiFi's battery in my status bar without opening a web page. If you have a site to build or fix, [hebronmimam.com](https://hebronmimam.com) is where to start.
+
 ## Credits
 
-Made by [Hebronmimam](https://hebronmimam.com). The screens use Panchang and Switzer from [Fontshare](https://www.fontshare.com), loaded at run time and not included here. Offline, the phone's system font stands in.
+- The first version, a battery-only app, was started with ChatGPT. This app grew from it.
+- Built with Claude.
+- The screens use Panchang and Switzer from [Fontshare](https://www.fontshare.com), loaded at run time and not included here. Offline, the phone's system font stands in.
 
 ## Licence
 

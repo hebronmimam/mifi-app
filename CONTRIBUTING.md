@@ -12,6 +12,8 @@ Thanks for helping. Bug reports, reports from boxes that aren't listed yet, and 
 
 If your MiFi or router isn't listed, open a [device report](https://github.com/hebronmimam/mifi-app/issues/new?template=device.yml) with the model, the firmware version from the box's own web page, and what the app showed.
 
+To add a box I need one in my hands. You can buy me one of the same model, or post me your own and I'll send it back when the app supports it. Message me on [WhatsApp](https://wa.me/2348149322169) or [Facebook](https://www.facebook.com/hebronmimam) first so we can agree on the details.
+
 ## Pull requests
 
 1. Fork, then branch from `main`.
