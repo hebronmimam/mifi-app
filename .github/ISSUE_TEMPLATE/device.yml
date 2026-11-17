@@ -1,0 +1,30 @@
+name: Device report
+description: Tried the app on a MiFi or router that isn't listed yet.
+labels: [device]
+body:
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      placeholder: e.g. ZTE MF927U
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+      description: From the box's own web page, usually under Device information.
+  - type: dropdown
+    id: result
+    attributes:
+      label: How it went
+      options:
+        - Everything works
+        - Some things work
+        - The app didn't recognise it
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: What worked and what didn't

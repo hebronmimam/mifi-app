@@ -1,0 +1,16 @@
+name: Feature request
+description: Something you'd like the app to do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What you'd like
+      description: What you want to do, and why it would help.
+    validations:
+      required: true
+  - type: input
+    id: box
+    attributes:
+      label: Your box
+      placeholder: e.g. MTN U10LS MiFi

@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in the app doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Never paste your admin password, Wi-Fi password, IMEI or phone numbers. Blur them in screenshots.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what the app did instead.
+    validations:
+      required: true
+  - type: input
+    id: box
+    attributes:
+      label: Your box
+      placeholder: e.g. MTN U10LS MiFi, or Tozed ZLT X100 Pro router
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: In the app, under Settings, App updates.
+      placeholder: e.g. 1.0.0, screens 1
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Phone and Android version
+      placeholder: e.g. Samsung Galaxy A54, Android 14
+  - type: textarea
+    id: shots
+    attributes:
+      label: Screenshots
+      description: Optional. Drag images here.
