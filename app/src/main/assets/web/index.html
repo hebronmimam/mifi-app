@@ -62,13 +62,18 @@
           <g data-ticks></g>
         </svg>
         <div class="mid">
-          <div class="speed num" data-p="down">0.0</div>
-          <div class="unit">Mbps download</div>
-          <div class="upline"><i aria-hidden="true"></i><span class="num" data-p="up">0.0</span> Mbps upload</div>
+          <div class="bat num" data-p="pct">—</div>
+          <div class="unit" data-p="battline"></div>
         </div>
       </div>
-      <p class="a-batt"><b class="num" data-p="pct">—</b> <span data-p="battline"></span></p>
-      <canvas class="trace" data-trace width="684" height="128" role="img" aria-label="Speed over the last minute"></canvas>
+      <div class="pair">
+        <div><span>Download</span><b class="num"><span data-p="down">0.0</span><small>Mbps</small></b><div class="segbar" data-seg="down" aria-hidden="true"></div></div>
+        <div><span>Upload</span><b class="num"><span data-p="up">0.0</span><small>Mbps</small></b><div class="segbar" data-seg="up" aria-hidden="true"></div></div>
+      </div>
+      <svg class="wave" data-wave viewBox="0 0 312 72" preserveAspectRatio="none" role="img" aria-label="Download and upload over the last minute">
+        <path data-wd fill="rgba(188,245,0,.14)" stroke="var(--ok)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+        <path data-wu fill="rgba(108,201,255,.14)" stroke="var(--up)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+      </svg>
       <div class="legend"><span><i style="background:var(--ok)"></i>Download</span><span><i style="background:var(--up)"></i>Upload</span><span class="sp"></span><span>last 60 s</span></div>
       <div class="stat3">
         <div><span>Signal</span><b data-p="sigword">—</b><span class="num" data-p="sig"></span></div>

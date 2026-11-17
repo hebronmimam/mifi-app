@@ -20,6 +20,7 @@
   --fs-body:16px; --lh-body:24px;
   --fs-head:20px; --lh-head:24px;
   --fs-title:24px; --lh-title:32px;
+  --fs-num:32px; --lh-num:40px; --fs-bat:36px;
   --fs-hero:48px;
   --sb:env(safe-area-inset-bottom,0px); --st:env(safe-area-inset-top,0px); --ime:0px;
   color-scheme:dark;
@@ -137,14 +138,20 @@ h3.scr{font:300 var(--fs-title)/var(--lh-title) var(--display);margin:var(--s-2)
 .dial{position:relative;width:216px;height:216px;margin:var(--s-3) auto 0}
 .dial svg{width:100%;height:100%;overflow:visible}
 .dial .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.dial .speed{font:300 var(--fs-hero)/1 var(--display);letter-spacing:-.02em}
-.dial .unit{color:var(--mute);margin-top:var(--s-2);font-size:var(--fs-sec)}
-.dial .upline{display:flex;align-items:center;gap:6px;margin-top:var(--s-1);color:var(--mute);font-size:var(--fs-cap);line-height:var(--lh-cap)}
-.dial .upline i{width:14px;height:2px;background:var(--up)}
-.dial .upline .num{color:var(--ink)}
-.a-batt{display:flex;justify-content:center;align-items:baseline;gap:var(--s-2);margin:var(--s-3) 0;font-size:var(--fs-sec);color:var(--mute);text-align:center}
-.a-batt b{font:500 var(--fs-title)/var(--lh-title) var(--display);color:var(--state)}
-.trace{height:var(--s-8);width:100%;display:block}
+/* Battery first (speed mock C, 2026-11-17): the dial is the battery (signal on the router), speed gets two tiles and two waves. */
+.dial .bat{font:300 var(--fs-bat)/var(--lh-num) var(--display);letter-spacing:-.02em;color:var(--state)}
+.dial .unit{color:var(--mute);margin-top:var(--s-2);font-size:var(--fs-sec);line-height:var(--lh-sec);max-width:160px;text-wrap:balance}
+.pair{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:var(--s-4)}
+.pair>div{padding:var(--s-3) 0;min-width:0}
+.pair>div+div{border-left:1px solid var(--line);padding-left:var(--s-3)}
+.pair>div>span{display:block;font-size:var(--fs-cap);line-height:var(--lh-cap);color:var(--mute)}
+.pair b{display:flex;align-items:baseline;gap:var(--s-1);font:300 var(--fs-num)/var(--lh-num) var(--display);margin-top:var(--s-1);white-space:nowrap}
+.pair small{font:400 var(--fs-cap)/var(--lh-cap) var(--text);color:var(--mute)}
+.segbar{display:flex;gap:2px;margin-top:var(--s-2);padding-right:var(--s-3)}
+.segbar i{flex:1;height:12px;border-radius:1px;background:var(--track);transition:background-color .25s ease}
+.segbar[data-seg="down"] i.on{background:var(--ok)}
+.segbar[data-seg="up"] i.on{background:var(--up)}
+.wave{display:block;width:100%;height:72px;margin-top:var(--s-4);overflow:visible}
 .legend{display:flex;gap:var(--s-4);font-size:var(--fs-cap);line-height:var(--lh-cap);color:var(--mute);margin-top:var(--s-2)}
 .legend i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:6px}
 .stat3{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:var(--s-4)}

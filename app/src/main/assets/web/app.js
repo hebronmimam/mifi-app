@@ -240,15 +240,18 @@ function paintNow() {
   // The box adds to its counters in bursts, so one second reads 2 Mbps and the next 25: show the last 3 s averaged.
   const on = isHere && r.connected !== false;
   const avg = k => S.liveOn ? S.hist.slice(-3).reduce((a, v) => a + v[k], 0) / 3 : mbps(k ? r.tx : r.rx);
-  p('down').textContent = on ? avg(0).toFixed(1) : '0.0';
-  p('up').textContent = on ? avg(1).toFixed(1) : '0.0';
+  [['down', 0], ['up', 1]].forEach(([k, i]) => {
+    const v = on ? avg(i) : 0, n = Math.round(speedPos(v) * 20);
+    p(k).textContent = v.toFixed(1);
+    $$(`[data-seg="${k}"] i`).forEach((s, j) => s.classList.toggle('on', j < n));
+  });
   if (router) {
     p('pct').textContent = isHere ? `${ring}%` : '—';
-    p('battline').textContent = s.tempC != null ? `signal, router at ${Math.round(s.tempC)} °C` : 'signal, plugged in';
+    p('battline').textContent = s.tempC != null ? `Signal, router at ${Math.round(s.tempC)} °C` : 'Signal, plugged in';
   } else {
     p('pct').textContent = r.battery != null && isHere ? `${r.battery}%` : '—';
-    p('battline').textContent = !isHere ? 'battery, last seen' : r.battery == null ? (st().signedIn ? 'battery not reported' : 'sign in to see the battery')
-      : r.charging ? 'charging' : r.battery < 15 ? 'on battery — charge it soon' : 'on battery';
+    p('battline').textContent = !isHere ? 'Battery, last seen' : r.battery == null ? (st().signedIn ? 'Battery not reported' : 'Sign in to see the battery')
+      : r.charging ? 'Battery, charging' : r.battery < 15 ? 'Battery low, charge it soon' : 'Battery';
   }
   p('sigword').textContent = isHere ? sigWord(r.rsrp, r.bars) : '—';
   p('sig').textContent = isHere ? (r.rsrp != null ? dbm(r.rsrp) : router ? 'from the router' : '') : '';
@@ -341,16 +344,24 @@ async function signIn(form) {
   }
 })();
 
+// The segment bars use a log scale to 100 Mbps, so 1, 10 and 100 sit a third apart and slow links still show.
+function speedPos(v) { return Math.min(1, Math.log10(1 + Math.max(0, v)) / Math.log10(101)); }
+$$('[data-seg]').forEach(b => { b.innerHTML = '<i></i>'.repeat(20); });
+
+/** The last minute as two overlapping waves (download under upload), on one shared linear scale. */
 function drawTrace() {
-  const cv = $('[data-trace]'), cx = cv.getContext('2d');
-  const W = cv.width, Ht = cv.height;
-  cx.clearRect(0, 0, W, Ht);
-  const top = Math.max(5, ...S.hist.flat()) * 1.15;
-  [[0, C.ok], [1, C.up]].forEach(([k, c]) => {
-    cx.beginPath();
-    S.hist.forEach((v, i) => { const x = i / (S.hist.length - 1) * W, y = Ht - 8 - (v[k] / top) * (Ht - 16); i ? cx.lineTo(x, y) : cx.moveTo(x, y); });
-    cx.strokeStyle = c; cx.lineWidth = 3; cx.lineJoin = 'round'; cx.stroke();
-  });
+  const W = 312, H = 72, n = S.hist.length, top = Math.max(5, ...S.hist.flat()) * 1.15;
+  const area = k => {
+    const pts = S.hist.map((v, i) => [i / (n - 1) * W, H - 2 - v[k] / top * (H - 8)]);
+    let d = `M0 ${H}L0 ${pts[0][1].toFixed(1)}`;
+    for (let i = 1; i < n; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], mx = ((x0 + x1) / 2).toFixed(1);
+      d += `C${mx} ${y0.toFixed(1)} ${mx} ${y1.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+    }
+    return d + `L${W} ${H}Z`;
+  };
+  $('[data-wd]').setAttribute('d', area(0));
+  $('[data-wu]').setAttribute('d', area(1));
 }
 
 let delayTimer = 0;
