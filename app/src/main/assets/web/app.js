@@ -663,14 +663,14 @@ async function recSheet(mac) {
 // ---------- settings ----------
 // Device writes the app makes. Each one is re-read afterwards to confirm the box took it.
 // Writes not in this list are shown and explained but not sent until checked on a real box.
-const MIFI_READ = 'SSID1,HideSSID,MAX_Access_num,AuthMode,WPAPSK1_encode,sysIdleTimeToSleep,wifi_coverage,net_select,ConnectionMode,roam_setting_option,' +
+const MIFI_READ = 'SSID1,HideSSID,MAX_Access_num,AuthMode,WPAPSK1_encode,sysIdleTimeToSleep,wifi_coverage,net_select,dial_mode,roam_setting_option,' +
   'ppp_status,network_type,network_provider,realtime_time,realtime_rx_bytes,realtime_tx_bytes,lte_rsrp,signalbar,profile_name,m_profile_name,wan_apn,ppp_auth_mode,' +
   'upnpEnabled,DMZEnable,IPPortFilterEnable,PortForwardEnable,pin_status,pinnumber,mgmt_quicken_power_on,cr_version,wa_inner_version,hardware_version';
 const MW = {
   sleep: v => ['SET_WIFI_SLEEP_INFO', { sysIdleTimeToSleep: v }, 'sysIdleTimeToSleep', v],
   range: v => ['SET_WIFI_COVERAGE', { WiFiCoverage: v }, 'wifi_coverage', v],
   netmode: v => ['SET_BEARER_PREFERENCE', { BearerPreference: v }, 'net_select', v],
-  autoconnect: on => ['SET_CONNECTION_MODE', { ConnectionMode: on ? 'auto_dial' : 'manual_dial', roam_setting_option: S.D.roam_setting_option || 'off' }, 'ConnectionMode', on ? 'auto_dial' : 'manual_dial'],
+  autoconnect: on => ['SET_CONNECTION_MODE', { ConnectionMode: on ? 'auto_dial' : 'manual_dial', roam_setting_option: S.D.roam_setting_option || 'off' }, 'dial_mode', on ? 'auto_dial' : 'manual_dial'],
   upnp: on => ['UPNP_SETTING', { upnp_setting_option: on ? '1' : '0' }, 'upnpEnabled', on ? '1' : '0'],
 };
 const PENDING = 'Changing this from the app comes in a screen update, once it has been checked on a real box. Use the original page for now.';
@@ -760,7 +760,7 @@ function setPageHtml(k) {
         ${val('Connected for', `<span class="num">${clock(up != null ? +up : null)}</span>`)}
         ${m ? val('Received', `<span class="num">${fmt(+S.D.realtime_rx_bytes || null)}</span>`) + val('Sent', `<span class="num">${fmt(+S.D.realtime_tx_bytes || null)}</span>`) : ''}
         ${val('Signal', `<span class="num">${s.rsrp != null ? dbm(s.rsrp) : sigWord(null, s.bars)}</span>`, s.rsrp != null ? sigWord(s.rsrp) : 'Read from the ' + w)}
-        ${m ? tog('Connect automatically', 'Reconnects after a drop', S.D.ConnectionMode !== 'manual_dial', 'autoconnect', 'dev') : pend('Connect automatically', 'Reconnects after a drop', true)}</div>
+        ${m ? tog('Connect automatically', 'Reconnects after a drop', S.D.dial_mode !== 'manual_dial', 'autoconnect', 'dev') : pend('Connect automatically', 'Reconnects after a drop', true)}</div>
         <div class="mp-actions"><button class="btn ghost" data-act="${c ? 'disconnect' : 'connect'}"${m ? '' : ' disabled'}>${c ? 'Disconnect' : 'Connect'}</button></div>`;
     },
     net: () => m

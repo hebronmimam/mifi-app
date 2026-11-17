@@ -171,7 +171,8 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
                 r.call(a.getJSONObject("body"), a.optInt("timeout", 17000))
             }
 
-            "sms.list" -> JSONArray(d.session { it.messages(a.optInt("limit", 60)) }.map { it.toJson() })
+            // The box lists by its storage number, which isn't the order texts arrived in: newest first by date.
+            "sms.list" -> JSONArray(d.session { it.messages(a.optInt("limit", 60)) }.sortedByDescending { it.time }.map { it.toJson() })
             "sms.read" -> {
                 val ids = ids(a)
                 val ok = d.session { it.markRead(ids) }
