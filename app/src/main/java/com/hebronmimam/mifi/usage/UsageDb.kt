@@ -12,7 +12,7 @@ import java.io.Writer
  * Usage history, by hour. Kept until the owner clears it; roughly 2 MB a year.
  * Times are epoch hours (UTC); the screens group them in local time.
  */
-class UsageDb(ctx: Context) : SQLiteOpenHelper(ctx, "usage.db", null, 1) {
+class UsageDb(ctx: Context) : SQLiteOpenHelper(ctx, "usage.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE hourly(dev TEXT NOT NULL, hour INTEGER NOT NULL, box INTEGER NOT NULL DEFAULT 0, mine INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(dev, hour))")
@@ -22,7 +22,19 @@ class UsageDb(ctx: Context) : SQLiteOpenHelper(ctx, "usage.db", null, 1) {
         db.execSQL("CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT)")
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            // Before 1.1.2 a router reading that fell back to another counter could add that counter's
+            // whole total as one jump (57 GB in an hour, seen on a ZLT). No 4G box carries 20 GB in an
+            // hour, so those hours keep only this phone's exact share. The next readings start afresh.
+            db.execSQL("UPDATE hourly SET box = mine WHERE box > $REPAIR_ABOVE")
+            db.execSQL("DELETE FROM meta WHERE k LIKE 'c:%'")
+        }
+    }
+
+    companion object {
+        const val REPAIR_ABOVE = 20_000_000_000L
+    }
 
     fun meta(k: String): String? = readableDatabase.rawQuery("SELECT v FROM meta WHERE k=?", arrayOf(k)).use {
         if (it.moveToFirst()) it.getString(0) else null

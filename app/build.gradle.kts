@@ -26,8 +26,8 @@ android {
         applicationId = "com.hebronmimam.mifi"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.1.1"
+        versionCode = 4
+        versionName = "1.1.2"
 
         // Where the app looks for new versions of itself and of its screens.
         buildConfigField("String", "UPDATE_REPO", "\"hebronmimam/mifi-app\"")

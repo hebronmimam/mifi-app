@@ -789,7 +789,7 @@ async function recSheet(mac) {
   const lbl = Array.from({ length: 7 }, (_, i) => DOW[new Date(start.getTime() + i * 864e5).getDay()]);
   S.rec = mac;
   openSheet(`<h3 class="scr">${esc(nm)}</h3>
-    <div class="list">${tog('This is mine', 'Moves it between Yours and Others', d.mine || self, 'mine', 'rec')}${val('First seen', seenAt(d.first))}${val('Last seen', on ? 'On now' : seenAt(d.last))}${val(`Data, ${PW[S.per]}`, `<span class="num">${data}</span>`, self ? 'Exact' : '')}${isBlocked(mac) ? val('Wi-Fi', 'Blocked') : ''}${val(`Online, ${PW[S.per]}`, `<span class="num">${d.onlineSec ? hrs(d.onlineSec) : 'None'}</span>`)}</div>
+    <div class="list">${self ? val('Yours', 'This phone') : tog('This is mine', 'Moves it between Yours and Others', d.mine, 'mine', 'rec')}${val('First seen', seenAt(d.first))}${val('Last seen', on ? 'On now' : seenAt(d.last))}${val(`Data, ${PW[S.per]}`, `<span class="num">${data}</span>`, self ? 'Exact' : '')}${isBlocked(mac) ? val('Wi-Fi', 'Blocked') : ''}${val(`Online, ${PW[S.per]}`, `<span class="num">${d.onlineSec ? hrs(d.onlineSec) : 'None'}</span>`)}</div>
     <div class="sec">Hours online, last 7 days</div>
     <div class="rec-days">${days.map(s => `<i class="${s ? '' : 'z'}" style="height:${s ? Math.max(4, s / 86400 * 64).toFixed(0) : 2}px" title="${hrs(s || 60)}"></i>`).join('')}</div>
     <div class="rec-lbl">${lbl.map(x => `<span>${x}</span>`).join('')}</div>
@@ -1168,6 +1168,21 @@ document.addEventListener('click', e => {
     S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id);
     haptic('tick'); return renderMsgs();
   }
+  // Switches first: they carry data-rec / data-dev too, which would otherwise open a record or switch box.
+  const sw = t.closest('.sw');
+  if (sw) {
+    if (sw.dataset.pending) return toast(PENDING);
+    const v = sw.getAttribute('aria-checked') !== 'true';
+    sw.setAttribute('aria-checked', v);
+    if (sw.dataset.pref) return setPref(sw.dataset.pref, v, sw);
+    if (sw.dataset.dev) return mifiWrite(sw.dataset.dev, v, `${sw.getAttribute('aria-label')} ${v ? 'on' : 'off'}`);
+    if (sw.dataset.rec) {
+      return N.call('usage.setMine', { dev: viewId(), mac: S.rec, mine: v })
+        .then(() => { haptic('tick'); toast(v ? 'Moved to Yours' : 'Moved to Others'); loadUsage(); })
+        .catch(e => { sw.setAttribute('aria-checked', !v); fail(e); });
+    }
+    return haptic('tick');
+  }
   const rc = t.closest('[data-rec]'); if (rc) return recSheet(rc.dataset.rec);
   const dvb = t.closest('[data-dev]');
   if (dvb) {
@@ -1184,19 +1199,6 @@ document.addEventListener('click', e => {
     if (k === 'checkMinutes') return setPref(k, +v, { getAttribute: () => `Checks every ${v} min,` });
     if (MW[k]) return mifiWrite(k, v, `${sg.parentNode.getAttribute('aria-label')}: ${sg.textContent}`);
     return;
-  }
-  const sw = t.closest('.sw');
-  if (sw) {
-    if (sw.dataset.pending) return toast(PENDING);
-    const v = sw.getAttribute('aria-checked') !== 'true';
-    sw.setAttribute('aria-checked', v);
-    if (sw.dataset.pref) return setPref(sw.dataset.pref, v, sw);
-    if (sw.dataset.dev) return mifiWrite(sw.dataset.dev, v, `${sw.getAttribute('aria-label')} ${v ? 'on' : 'off'}`);
-    if (sw.dataset.rec) {
-      return N.call('usage.setMine', { dev: viewId(), mac: S.rec, mine: v })
-        .then(() => { haptic('tick'); toast(v ? 'Moved to Yours' : 'Moved to Others'); loadUsage(); }).catch(fail);
-    }
-    return haptic('tick');
   }
   const a = t.closest('[data-act]'); if (!a || a.disabled) return;
   act(a.dataset.act, a);

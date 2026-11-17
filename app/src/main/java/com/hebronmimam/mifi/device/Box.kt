@@ -56,6 +56,8 @@ data class Status(
     val txRate: Long? = null,
     /** A running byte counter for the whole box (resets are handled by the recorder). */
     val counter: Long? = null,
+    /** Which of the box's counters [counter] came from. Two readings only compare when this matches. */
+    val counterKind: String? = null,
     val monthBytes: Long? = null,
     val sessionSec: Long? = null,
     val uptimeSec: Long? = null,

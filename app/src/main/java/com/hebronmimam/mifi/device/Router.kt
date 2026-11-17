@@ -151,6 +151,7 @@ class Router(private val lan: Lan, override val host: String) : Box {
             rxRate = rate(sum(all, "dl_flow_rate", "dl_flow_rate_4g")),
             txRate = rate(sum(all, "ul_flow_rate", "ul_flow_rate_4g")),
             counter = if (wanRx != null || wanTx != null) (wanRx ?: 0) + (wanTx ?: 0) else session ?: used,
+            counterKind = when { wanRx != null || wanTx != null -> "wan"; session != null -> "session"; used != null -> "used"; else -> null },
             monthBytes = used ?: month,
             sessionSec = dhms(all.str("onlineDuration", "online_duration")),
             uptimeSec = all.long("runTime", "uptime", "run_time"),

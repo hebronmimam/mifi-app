@@ -2,6 +2,13 @@
 
 All notable changes to this app. Versions follow [semantic versioning](https://semver.org).
 
+## [1.1.2] - 2026-11-17
+
+- Usage: a router could show tens of GB too many for one hour. When one of its readings fell back to another of its counters, the app took the difference as data. Readings now only compare with the same counter, a counter going down only counts as a restart when the box really restarted, and no jump faster than 4G is counted. Hours already recorded above 20 GB keep only this phone's exact share.
+- Usage: what the box carried while your phone was away is now spread over those hours, instead of landing in the hour the phone came back.
+- Usage: "This is mine" on a device's record works. Tapping it did nothing before. This phone's own record no longer offers it, since this phone is always yours.
+- Settings: the MiFi's Connect automatically and UPnP switches work. Tapping them did nothing before.
+
 ## [1.1.1] - 2026-11-17
 
 - The update notice now stands on its own in the notification shade. Android 15 had folded it in under the battery notice.
@@ -36,6 +43,7 @@ The first release.
 - The screens update themselves from signed releases. A new app version installs with one tap.
 - Supports ZTE goform MiFis (such as the MTN U10LS) and Tozed ZLT home routers.
 
+[1.1.2]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.2
 [1.1.1]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.1
 [1.1.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.0.0

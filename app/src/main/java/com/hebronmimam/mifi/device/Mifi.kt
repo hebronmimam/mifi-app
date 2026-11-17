@@ -153,6 +153,7 @@ class Mifi(
             rxRate = o.long("realtime_rx_thrpt"),
             txRate = o.long("realtime_tx_thrpt"),
             counter = if (rx != null || tx != null) (rx ?: 0) + (tx ?: 0) else null,
+            counterKind = "month",
             monthBytes = if (rx != null || tx != null) (rx ?: 0) + (tx ?: 0) else null,
             sessionSec = o.long("realtime_time"),
             smsUnread = o.num("sms_unread_num")?.toInt(),

@@ -22,6 +22,38 @@ class LogicTest {
         assertEquals(30L, Attribution.delta(1000, 30))
     }
 
+    @Test fun impossibleJumpsAreMisreads() {
+        // Five minutes at 4G speeds: a few GB at most. The router's whole since-boot total is not data.
+        assertTrue(Attribution.plausible(3_000_000_000, 300_000))
+        assertFalse(Attribution.plausible(57_700_000_000, 300_000))
+        assertFalse(Attribution.plausible(1, -1))
+    }
+
+    @Test fun aCounterGoingDownIsOnlyAResetWhenTheBoxRestarted() {
+        val h = 3_600_000L
+        val day: (Long) -> Long = { it / (24 * h) }
+        // Away 3 hours; the router has been up 1 day 14 hours, so a lower reading is a short read.
+        assertFalse(Attribution.resetIsReal("wan", 38 * 3600L, 7 * h, 10 * h, day))
+        // It rebooted an hour ago: a real restart.
+        assertTrue(Attribution.resetIsReal("wan", 3600L, 7 * h, 10 * h, day))
+        // A monthly counter resets when the day turns, never within one.
+        assertTrue(Attribution.resetIsReal("month", null, 23 * h, 25 * h, day))
+        assertFalse(Attribution.resetIsReal("month", null, 7 * h, 10 * h, day))
+        // Nothing to go on: not a reset.
+        assertFalse(Attribution.resetIsReal("session", null, 7 * h, 10 * h, day))
+    }
+
+    @Test fun awayTimeIsSpreadOverItsHours() {
+        val h = 3_600_000L
+        // Away from 07:30 to 10:30 with 3 GB carried: half an hour, two full hours, half an hour.
+        val s = Attribution.spread(7 * h + h / 2, 10 * h + h / 2, 3_000_000_000)
+        assertEquals(listOf(7L, 8L, 9L, 10L), s.map { it.first })
+        assertEquals(listOf(500_000_000L, 1_000_000_000L, 1_000_000_000L, 500_000_000L), s.map { it.second })
+        assertEquals(3_000_000_000L, s.sumOf { it.second })
+        // Within one hour it all stays in that hour.
+        assertEquals(listOf(7L to 42L), Attribution.spread(7 * h + 60_000, 7 * h + 360_000, 42))
+    }
+
     @Test fun rangeIsExactWhenOneDeviceIsAlone() {
         val one = Attribution.split(box = 1000, phone = 200, others = listOf("A"))
         assertEquals(listOf(Attribution.Share("A", 800, 800)), one)
