@@ -46,6 +46,8 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
     private var proxy: JavaScriptReplyProxy? = null
     private val ticker = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "mifi-live").apply { isDaemon = true } }
     private var liveTask: ScheduledFuture<*>? = null
+    private var watchTask: ScheduledFuture<*>? = null
+    private val recording = java.util.concurrent.atomic.AtomicBoolean(false)
     @Volatile private var pendingRoute: String? = null
     @Volatile var insets: JSONObject = JSONObject()
 
@@ -258,6 +260,30 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
         liveTask = ticker.scheduleWithFixedDelay({
             app.devices.live()?.let { event("live", it) }
         }, 0, 1, TimeUnit.SECONDS)
+    }
+
+    /**
+     * While the app is on screen, a reading every 30 s goes into the usage record, so "Today used"
+     * and the Usage tab move as data is used, not only on the background check's minutes.
+     */
+    @Synchronized
+    fun watch(on: Boolean) {
+        watchTask?.cancel(false)
+        watchTask = null
+        if (!on || ticker.isShutdown) return
+        watchTask = ticker.scheduleWithFixedDelay({
+            if (recording.compareAndSet(false, true)) app.calls.execute {
+                try { recordNow() } finally { recording.set(false) }
+            }
+        }, 0, 30, TimeUnit.SECONDS)
+    }
+
+    private fun recordNow() {
+        val record = app.prefs.recordUsage
+        val s = runCatching { app.devices.refresh(withClients = true) }.getOrNull() ?: return
+        val id = app.devices.id ?: return
+        if (!record) return
+        if (runCatching { app.recorder.record(id, s, app.lan.myIp()) }.isSuccess) event("usage", JSONObject().put("dev", id))
     }
 
     private fun ids(a: JSONObject): List<String> {

@@ -108,11 +108,12 @@ class MainActivity : Activity(), Host {
     override fun onResume() {
         super.onResume()
         bridge.event("visible", JSONObject().put("on", true))
-        app.calls.execute { runCatching { app.devices.refresh() } }
+        bridge.watch(true) // a fresh reading now, then every 30 s, recorded
     }
 
     override fun onPause() {
         bridge.live(false)
+        bridge.watch(false)
         bridge.event("visible", JSONObject().put("on", false))
         super.onPause()
     }

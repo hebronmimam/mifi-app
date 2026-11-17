@@ -256,7 +256,8 @@ function paintNow() {
 /** The name steps down the type scale (20, 16, 14) until it fits beside the picture. */
 function fitName() {
   const s = p('name'), b = s.parentNode;
-  for (const px of [20, 16, 14]) { b.style.fontSize = px + 'px'; if (s.scrollWidth <= s.clientWidth) break; }
+  if (!s.clientWidth) return; // not laid out (app in the background): fit on the next paint
+  for (const px of [20, 16, 14]) { b.style.fontSize = px + 'px'; if (s.scrollWidth <= s.clientWidth + 1) break; }
 }
 document.fonts?.ready.then(fitName);
 addEventListener('resize', fitName);
@@ -291,7 +292,9 @@ function signInForm() {
   const locked = st().lockedUntil > Date.now(), w = what();
   const secs = Math.ceil((st().lockedUntil - Date.now()) / 1000);
   return `<div class="state-box"><h3>Sign in to ${esc(devName())}</h3>
-    <p>Type the ${w}’s admin password once. The app keeps it on this phone, locked by Android, and signs itself in from then on.</p>
+    <p>${st().borrowed
+      ? `This phone is signed in through a browser, and that ends on its own. Type the ${w}’s admin password here once so the app can keep you signed in.`
+      : `Type the ${w}’s admin password once. The app keeps it on this phone, locked by Android, and signs itself in from then on.`}</p>
     <form data-signin autocomplete="on">
       <div class="field"><label for="si-pw">Password</label><div class="pw"><input id="si-pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required${locked ? ' disabled' : ''}><button type="button" data-act="peek" aria-label="Show the password">Show</button></div></div>
       <div class="list">${tog('Stay signed in', 'Password kept on this phone only', S.prefs.stayIn !== false, 'signinStay', 'local')}</div>
@@ -1054,7 +1057,7 @@ function onState(s) {
   if (s.id && s.id !== prevId && s.selected !== s.id) { N.call('device.select', { id: s.id }).then(onState).catch(() => {}); }
   // A new MiFi is first named after its Wi-Fi, which is what the owner calls it.
   const d = devOf(s.id), ssid = s.status?.ssid;
-  if (s.id && ssid && d.name === (s.kind === 'router' ? 'Home router' : 'MiFi') && !S.ui['named:' + s.id] && s.kind === 'mifi') {
+  if (s.id && ssid && s.status?.kind === 'mifi' && d.name === 'MiFi' && !S.ui['named:' + s.id] && s.kind === 'mifi') {
     S.ui['named:' + s.id] = 1; saveUi();
     N.call('device.rename', { id: s.id, name: ssid }).then(onState).catch(() => {});
   }
@@ -1079,6 +1082,12 @@ N.on('live', d => {
   drawTrace(); paintNow();
 });
 N.on('sms', () => { loadMsgs(); });
+// A new reading went into the record: today's figure and the open Usage tab follow it.
+N.on('usage', d => {
+  if (d.dev !== viewId()) return;
+  S.todayAt = 0; loadToday();
+  if (S.tab === 'usage' && !sheetOpen()) loadUsage();
+});
 N.on('route', d => route(d.route));
 N.on('insets', setInsets);
 N.on('visible', d => { S.visible = !!d.on; S.liveOn = !S.visible && S.liveOn; wantLive(); if (d.on) { loadToday(); if (S.tab === 'msgs') loadMsgs(); } });

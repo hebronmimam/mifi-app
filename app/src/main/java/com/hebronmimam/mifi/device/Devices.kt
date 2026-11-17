@@ -50,7 +50,8 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
             return null
         }
         val newId = "${found.kind}:${found.model ?: found.kind}"
-        if (newId != id) { needsSignIn = false; lockedUntil = 0 }
+        // A different box: the last reading belongs to the old one, so it must not show (or name) this one.
+        if (newId != id) { needsSignIn = false; lockedUntil = 0; last = null; lastAt = 0 }
         box = found; id = newId; problem = null
         register(found, newId)
         changed()
@@ -175,7 +176,15 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
 
     fun live(): JSONObject? {
         val b = box ?: return null
-        return runCatching { synchronized(lock) { b.live() } }.getOrNull()
+        val o = runCatching { synchronized(lock) { b.live() } }.getOrNull() ?: return null
+        // The live tick carries the battery too: keep the reading (and the status bar) in step with it.
+        val l = last
+        if (l != null && o.has("battery") && !o.isNull("battery")) {
+            val bat = o.optInt("battery")
+            val chg = o.optBoolean("charging", l.charging)
+            if (bat != l.battery || chg != l.charging) { last = l.copy(battery = bat, charging = chg); changed() }
+        }
+        return o
     }
 
     // ---- known boxes ----
@@ -215,7 +224,10 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
             "selected" to prefs.selected,
             "problem" to problem,
             "signedIn" to (box?.hasSession == true),
-            "needsSignIn" to (needsSignIn || (box != null && box?.hasSession != true && !hasPassword())),
+            // No password in the app means the form shows, even when the box has a session: a session
+            // the browser opened ends on its own, and the app could not sign itself back in.
+            "needsSignIn" to (needsSignIn || (box != null && !hasPassword())),
+            "borrowed" to (box?.hasSession == true && !hasPassword()),
             "lockedUntil" to lockedUntil,
             "remembered" to (id != null && secrets.has(id)),
             "status" to last?.toJson(),

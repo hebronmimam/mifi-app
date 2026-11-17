@@ -52,5 +52,6 @@ class MiFiApp : Application() {
         updater = Updater(this)
         Notifier.channels(this)
         devices.listen { emit("state", devices.state()) }
+        devices.listen { monitor.readingChanged() }
     }
 }

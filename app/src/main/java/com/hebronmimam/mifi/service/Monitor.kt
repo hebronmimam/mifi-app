@@ -44,7 +44,17 @@ class Monitor(private val app: MiFiApp) {
 
     fun showStatus(s: Status? = app.devices.last) {
         if (!MonitorService.running) return
+        shown = key(s)
         app.getSystemService(NotificationManager::class.java).notify(Notifier.ID_STATUS, statusNotification(app, s))
+    }
+
+    @Volatile private var shown: String? = null
+    private fun key(s: Status?) = s?.let { "${app.devices.id}|${it.battery}|${it.charging}|${it.connected}|${it.network}|${it.clients?.size}" }
+
+    /** Any fresh reading (the app open, a sign-in) also updates the status bar, not only the timed check. */
+    fun readingChanged() {
+        val s = app.devices.last ?: return
+        if (key(s) != shown) showStatus(s)
     }
 
     private fun lowBattery(s: Status) {
