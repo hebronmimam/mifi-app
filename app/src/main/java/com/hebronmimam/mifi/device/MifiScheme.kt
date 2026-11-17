@@ -27,21 +27,26 @@ data class MifiScheme(
         (if (ad == "md5") Hash.md5(s) else Hash.sha256(s)).let { if (upper && ad != "md5") it.uppercase() else it }
 
     fun loginPassword(password: String, ld: String): String = when (login) {
-        0 -> android.util.Base64.encodeToString(password.toByteArray(), android.util.Base64.NO_WRAP)
-        1 -> hash(password)
+        0 -> b64(password)
+        1 -> hash(b64(password))
         else -> hash(hash(password) + ld)
     }
 
     fun ad(waInner: String, crVersion: String, rd: String): String = adHash(adHash(waInner + crVersion) + rd)
 
     fun toJson(): JSONObject = JSONObject()
-        .put("login", login).put("upper", upper).put("ad", ad)
+        .put("v", VERSION).put("login", login).put("upper", upper).put("ad", ad)
         .put("loginAd", loginAd).put("detected", detected)
 
     companion object {
+        /** Bumped when [analyze] changes, so a scheme read by older code is read again. */
+        private const val VERSION = 2
+
         val DEFAULT = MifiScheme(login = 2, upper = true, ad = "md5", loginAd = false, detected = false)
 
-        fun fromJson(o: JSONObject?): MifiScheme? = o?.let {
+        private fun b64(s: String) = java.util.Base64.getEncoder().encodeToString(s.toByteArray(Charsets.UTF_8))
+
+        fun fromJson(o: JSONObject?): MifiScheme? = o?.takeIf { it.optInt("v") == VERSION }?.let {
             MifiScheme(
                 it.optInt("login", 2), it.optBoolean("upper", true), it.optString("ad", "md5"),
                 it.optBoolean("loginAd", false), it.optBoolean("detected", false),
@@ -52,33 +57,56 @@ data class MifiScheme(
         private val UPPER_AFTER_HASH = Regex(
             """(?:SHA256|sha256|hex_sha256|paswordAlgorithmsCookie)\s*\([^;]{0,200}?\)\s*\)?\s*\.toUpperCase\(\)"""
         )
+        /** The bundled SHA256 picks its hex alphabet from a flag: `for(var i=g?"0123456789ABCDEF":…`. */
+        private val HEX_CASE_FLAG = Regex("""([A-Za-z_$][\w$]*)\s*\?\s*["']0123456789ABCDEF["']""")
+        private val LOGIN_REQUEST = Regex("""goformId\s*[:=]\s*["']LOGIN["']""")
 
         /** Read the scheme out of the concatenated scripts of the box's web page. */
         fun analyze(js: String): MifiScheme {
             if (js.isBlank()) return DEFAULT
             val flag = SHA_FLAG.find(js)?.groupValues?.get(1)?.toIntOrNull()
-            val usesLd = js.contains("\"LD\"") || js.contains("'LD'") || js.contains("cmd=LD") || js.contains("getLD")
+            val usesLd = js.contains("\"LD\"") || js.contains("'LD'") || js.contains("cmd=LD") || js.contains("getLD") || js.contains("nv:\"LD\"")
             val login = when {
                 flag != null && flag in 0..2 -> if (flag == 0 && usesLd) 2 else flag
                 usesLd -> 2
                 else -> 0
             }
 
-            // The LOGIN request and the code just before it, where the password is hashed.
-            val loginAt = indexOfToken(js, "LOGIN")
-            val loginWin = if (loginAt >= 0) js.substring((loginAt - 2500).coerceAtLeast(0), (loginAt + 600).coerceAtMost(js.length)) else ""
-            val upper = if (loginWin.isNotEmpty()) UPPER_AFTER_HASH.containsMatchIn(loginWin) else UPPER_AFTER_HASH.containsMatchIn(js)
+            // What paswordAlgorithmsCookie() is on this firmware (SHA256 on most, MD5 on some).
+            val pac = js.indexOf("function paswordAlgorithmsCookie").takeIf { it >= 0 }
+                ?.let { js.substring(it, (it + 160).coerceAtMost(js.length)) }.orEmpty()
+            val pacAlgo = if (pac.contains("md5", ignoreCase = true)) "md5" else "sha256"
 
-            // The AD token: hash(hash(wa_inner_version + cr_version) + RD).
-            val adAt = js.indexOf("cr_version", js.indexOf("wa_inner_version").coerceAtLeast(0))
-            val adWin = if (adAt >= 0) js.substring((adAt - 600).coerceAtLeast(0), (adAt + 600).coerceAtMost(js.length)) else ""
+            // Upper case either from an explicit .toUpperCase(), or from the bundled SHA256's hex flag.
+            val upper = UPPER_AFTER_HASH.containsMatchIn(js) || sha256HexIsUpper(js)
+
+            // The LOGIN request object itself: does it carry an AD? (Many firmwares skip AD for LOGIN.)
+            val loginAt = LOGIN_REQUEST.find(js)?.range?.first ?: indexOfToken(js, "LOGIN")
+            val loginObj = if (loginAt >= 0) js.substring(loginAt, js.indexOf('}', loginAt).let { if (it < 0) js.length else it }.coerceAtMost(loginAt + 600)) else ""
+            val loginAd = Regex("""[{,\s]AD\s*:|["']AD["']\s*:""").containsMatchIn(loginObj)
+
+            // The AD token: hash(hash(wa_inner_version + cr_version) + RD), with whichever hash builds it.
+            val adAt = Regex("""\.AD\s*=|[{,]\s*AD\s*:""").find(js)?.range?.first ?: -1
+            val crAt = js.indexOf("cr_version", js.indexOf("wa_inner_version").coerceAtLeast(0))
+            val adWin = when {
+                adAt >= 0 -> js.substring((adAt - 400).coerceAtLeast(0), adAt)
+                crAt >= 0 -> js.substring((crAt - 600).coerceAtLeast(0), (crAt + 600).coerceAtMost(js.length))
+                else -> ""
+            }
             val ad = when {
                 adWin.contains("hex_md5") || adWin.contains("md5(") -> "md5"
+                adWin.contains("paswordAlgorithmsCookie") -> pacAlgo
                 adWin.contains("SHA256") || adWin.contains("sha256") -> "sha256"
                 else -> "md5"
             }
-            val loginAd = loginWin.contains("AD:") || loginWin.contains("\"AD\"") || loginWin.contains(".AD=")
-            return MifiScheme(login, upper, ad, loginAd, detected = flag != null || loginWin.isNotEmpty())
+            return MifiScheme(login, upper, ad, loginAd, detected = flag != null || loginObj.isNotEmpty())
+        }
+
+        private fun sha256HexIsUpper(js: String): Boolean {
+            val at = js.indexOf("function SHA256").takeIf { it >= 0 } ?: return false
+            val body = js.substring(at, (at + 6000).coerceAtMost(js.length))
+            val v = HEX_CASE_FLAG.find(body)?.groupValues?.get(1) ?: return false
+            return Regex("""[,;{(\s]${Regex.escape(v)}\s*=\s*(?:1|!0|true)\b""").containsMatchIn(body)
         }
 
         /** Index of "LOGIN" as a whole string literal (not LOGIN_MULTI_USER, not LOGOUT). */

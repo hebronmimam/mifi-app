@@ -68,6 +68,21 @@ class LogicTest {
         assertTrue(s.loginAd)
     }
 
+    /** The U10LS shape: upper case comes from SHA256's own hex flag, LOGIN skips AD, AD uses paswordAlgorithmsCookie. */
+    @Test fun schemeFromBundledSha256HexFlag() {
+        val js = """
+            WEB_ATTR_IF_SUPPORT_SHA256:2,ACCESSIBLE_ID_SUPPORT:!0
+            function paswordAlgorithmsCookie(f){return SHA256(f)}function SHA256(q){var y=1,g=1;return function(l){for(var i=g?"0123456789ABCDEF":"0123456789abcdef",r="";;){}}(q)}
+            function cF(g,b,f,m,d){if(cL.ACCESSIBLE_ID_SUPPORT&&d&&"LOGIN"!=g.goformId){var j=paswordAlgorithmsCookie(rd0+rd1),l=bI({nv:"RD"}).RD,h=paswordAlgorithmsCookie(j+l);g.AD=h}}
+            function b(f){var d=bI({nv:"LD"}).LD;return{isTest:aQ,goformId:"LOGIN",password:"2"==cL.WEB_ATTR_IF_SUPPORT_SHA256?paswordAlgorithmsCookie(paswordAlgorithmsCookie(f.password)+d):x}}
+        """.trimIndent()
+        val s = MifiScheme.analyze(js)
+        assertEquals(2, s.login)
+        assertTrue(s.upper)
+        assertEquals("sha256", s.ad)
+        assertFalse(s.loginAd)
+    }
+
     @Test fun loginHashFollowsScheme() {
         val upper = MifiScheme(2, true, "md5", false, true)
         val expect = Hash.sha256(Hash.sha256("pw").uppercase() + "LD1").uppercase()

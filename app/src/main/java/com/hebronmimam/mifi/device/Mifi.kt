@@ -99,7 +99,7 @@ class Mifi(
         val ld = if (s.login == 2) (get("LD").str("LD") ?: return SignIn(false, "The MiFi did not answer", rejected = false)) else ""
         val r = set("LOGIN", mapOf("password" to s.loginPassword(password, ld)), withAd = s.loginAd)
         val result = r.str("result")
-        if (result == "0") {
+        if (result == "0" || result == "4") {
             loggedIn = true
             return SignIn(true)
         }
