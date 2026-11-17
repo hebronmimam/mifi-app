@@ -41,7 +41,7 @@ class MainActivity : Activity(), Host {
         window.navigationBarColor = Color.TRANSPARENT
 
         web = WebView(this)
-        web.setBackgroundColor(0xFF121212.toInt())
+        web.setBackgroundColor(0xFF121316.toInt())
         web.overScrollMode = View.OVER_SCROLL_NEVER
         web.settings.apply {
             javaScriptEnabled = true

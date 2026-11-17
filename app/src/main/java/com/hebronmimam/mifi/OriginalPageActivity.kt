@@ -37,7 +37,7 @@ class OriginalPageActivity : Activity() {
         setContentView(web)
         val gw = app.lan.gateway(wifi) ?: app.devices.box?.host
         if (gw == null) {
-            web.loadData("<body style='background:#121212;color:#F1F1F1;font:16px sans-serif;padding:24px'>Join the box's Wi-Fi first.</body>", "text/html", "utf-8")
+            web.loadData("<body style='background:#121316;color:#F1F2F5;font:16px sans-serif;padding:24px'>Join the box's Wi-Fi first.</body>", "text/html", "utf-8")
         } else {
             web.loadUrl("http://$gw/")
         }

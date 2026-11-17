@@ -9,7 +9,7 @@
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const app = $('[data-app]');
-const C = { ok: '#BCF500', warn: '#F5B83D', bad: '#FF6B5B', up: '#6CC9FF', idle: '#6E6E6E' };
+const C = { ok: '#BCF500', warn: '#F5B83D', bad: '#FF6B5B', up: '#6CC9FF', idle: '#6C7078' };
 const MINUS = '−';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -336,7 +336,7 @@ async function signIn(form) {
     const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     l.setAttribute('x1', 150 + r1 * Math.cos(a)); l.setAttribute('y1', 150 + r1 * Math.sin(a));
     l.setAttribute('x2', 150 + r2 * Math.cos(a)); l.setAttribute('y2', 150 + r2 * Math.sin(a));
-    l.setAttribute('stroke', '#333333'); l.setAttribute('stroke-width', i % 5 ? 1 : 1.6);
+    l.setAttribute('stroke', '#33353A'); l.setAttribute('stroke-width', i % 5 ? 1 : 1.6);
     g.append(l);
   }
 })();
