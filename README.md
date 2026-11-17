@@ -34,7 +34,7 @@
 
 ## Features
 
-| | |
+| Feature | What it does |
 |---|---|
 | **Battery in the status bar** | The MiFi's battery percentage is the notification icon, so you see it without opening anything. One alert at 20%. |
 | **Live speed** | Download and upload right now, with the last minute as a chart. |
