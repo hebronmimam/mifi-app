@@ -87,5 +87,6 @@ if (!args.has('--web-only')) {
 if (args.has('--publish')) {
   const tag = args.has('--web-only') ? `web-${webVersion}` : `v${versionName}`;
   const notes = args.has('--web-only') ? `Screens version ${webVersion}. The app installs these by itself.` : `Version ${versionName}, with screens version ${webVersion}.`;
-  execFileSync('gh', ['release', 'create', tag, ...out, '--title', tag, '--notes', notes], { cwd: root, stdio: 'inherit' });
+  const ask = '\n\nFeedback or a feature request? Message me on [WhatsApp](https://wa.me/2348149322169) or [Facebook](https://www.facebook.com/hebronmimam).';
+  execFileSync('gh', ['release', 'create', tag, ...out, '--title', tag, '--notes', notes + (args.has('--web-only') ? '' : ask)], { cwd: root, stdio: 'inherit' });
 }

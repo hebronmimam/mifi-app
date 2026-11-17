@@ -11,7 +11,7 @@ It talks to the box over the box's own Wi-Fi, through the same web API that the 
 
 ## What it does
 
-- **Now.** A live dial with the download speed, the battery (or signal, for a router), a 60-second speed trace, signal, delay and today's data.
+- **Now.** A dial with the battery (or signal, for a router), then live download and upload. Speed is not a test: it is the traffic going through the box right now, for every device on it, read once a second and averaged over 3 seconds. Below that, the last minute, signal, delay and today's data.
 - **Battery in the status bar.** The MiFi's percentage is the notification icon. The app checks every 5 minutes, every minute while the battery is low or the internet is down, and every 15 minutes in battery saver. You get one alert at 20%.
 - **Messages.** New texts on the box pop up as Android notifications, and tapping one opens it. You can reply, write a new message, delete one, and send balance codes (USSD) and read the reply.
 - **Usage.** It records every device that joins, every hour, and keeps the record until you clear it, at about 2 MB a year. This phone's data is exact. The box counts the other devices together, so each one shows the least and the most it could have used. You can export the record as a CSV file.
@@ -51,6 +51,10 @@ Bump `web` in `assets/web/version.json` for new screens. Bump `versionCode` and 
 ## Fonts
 
 The screens use Panchang and Switzer from [Fontshare](https://www.fontshare.com). They are loaded from Fontshare at run time and are not included in this repository. Offline, the phone's system font stands in.
+
+## Feedback and feature requests
+
+Found a problem, or want the app to do something new? Message me on [WhatsApp](https://wa.me/2348149322169) or [Facebook](https://www.facebook.com/hebronmimam). Issues on this repository are welcome too.
 
 ## Licence
 
