@@ -216,7 +216,7 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             "device.scheme" -> d.schemeInfo() ?: JSONObject.NULL
 
             "update.info" -> app.updater.info()
-            "update.check" -> app.updater.check()
+            "update.check" -> app.updater.check().also { app.updater.announce(it) }
             "update.web" -> app.updater.installWeb() ?: JSONObject.NULL
             "update.install" -> {
                 if (!app.updater.canInstallApk()) JSONObject().put("needsPermission", true)

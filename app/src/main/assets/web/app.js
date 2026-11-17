@@ -988,7 +988,7 @@ function setIndex() {
       ${tog('Message notifications', `New texts on the ${w} pop up like any app’s`, P.smsNotify && P.notifications !== false, 'smsNotify')}
       ${lnk('bg', 'Checking in the background', `Every ${P.checkMinutes || 5} min, light on battery`)}
       ${lnk('rec', 'Usage record', P.recordUsage === false ? 'Paused' : 'Kept until you clear it')}
-      ${lnk('app', 'App updates', `Version ${esc(S.app)}, from GitHub`)}
+      ${lnk('app', 'App updates', updReady() ? `Version ${esc(updReady().version)} is ready` : `Version ${esc(S.app)}, from GitHub`)}
     </div>
     ${m ? `<div class="mp-actions"><button class="btn danger" data-act="shutdown"${si ? '' : ' disabled'}>Shut down the MiFi</button></div>` : ''}
     <button class="raw" data-act="raw"${live ? '' : ' disabled'}>Open the ${w}’s original page</button>`;
@@ -1073,11 +1073,11 @@ function setPageHtml(k) {
       const u = S.upd || {}, L = u.latest || {};
       const checked = u.checkedAt ? seenAt(u.checkedAt) : 'Not yet';
       let action = '<button class="btn" data-act="appcheck">Check now</button>';
-      if (L.appNewer) action = `<button class="btn" data-act="appinstall">Install version ${esc(L.app.version)}</button>`;
+      if (L.appNewer) action = `<button class="btn" data-act="appinstall"${S.updBusy ? ' disabled' : ''}>${S.updBusy ? 'Updating…' : `Update to version ${esc(L.app.version)}`}</button>`;
       else if (L.webNewer) action = '<button class="btn" data-act="webupdate">Update the screens now</button>';
       return back('App updates') + `<div class="list">${val('This version', esc(S.app))}${val('Screens', `Version ${S.web}`, 'Updated on their own')}${val('Last checked', checked)}${tog('Look for updates', 'Checks GitHub once a day', P.autoUpdate, 'autoUpdate')}</div>
         <div class="mp-actions">${action}</div>
-        <p class="mp-note">Screen changes arrive by themselves. A new app version downloads here, then Android asks you to tap Install once.</p>
+        <p class="mp-note">Screen changes arrive by themselves. When a new app version is out, the app and your status bar tell you. Tap Update, then Android asks you to confirm once.</p>
         ${u.repo ? `<button class="raw" data-act="github">See the project on GitHub</button>` : ''}`;
     },
   };
@@ -1318,17 +1318,49 @@ function act(k, el) {
       el.classList.add('busy');
       return N.call('update.web').then(v => { if (v) { toast('Screens updated'); setTimeout(() => location.reload(), 600); } else { el.classList.remove('busy'); toast('Nothing new to install'); } })
         .catch(e => { el.classList.remove('busy'); fail(e); });
-    case 'appinstall':
-      el.classList.add('busy');
-      return N.call('update.install').then(r => {
-        el.classList.remove('busy');
-        if (r.needsPermission) return ask({
-          title: 'Allow updates from this app', text: 'Android asks once before an app outside the Play Store can install its own updates. Turn on “Allow from this source”, then come back and tap Install again.',
-          yes: 'Open the setting', danger: false, then: () => N.call('update.allow'),
-        });
-        toast('Downloading… Android asks you to tap Install.');
-      }).catch(e => { el.classList.remove('busy'); fail(e); });
+    case 'appinstall': return installApp();
+    case 'updlater':
+      S.ui.updLater = { v: S.upd?.latest?.app?.version, at: Date.now() }; saveUi(); return paintUpd();
   }
+}
+
+// ---------- app updates ----------
+// A new app version shows as a bar on Now (and in the status bar, from the phone). One tap installs it.
+const updReady = () => { const L = S.upd?.latest; return L?.appNewer ? L.app : null; };
+
+function paintUpd() {
+  const bar = $('[data-updbar]'), a = updReady(), later = S.ui?.updLater;
+  const snoozed = a && later && later.v === a.version && Date.now() - later.at < 24 * 3.6e6;
+  bar.hidden = !a || (snoozed && !S.updBusy);
+  if (bar.hidden) return;
+  const pct = S.updPct;
+  bar.innerHTML = `<span class="t"><b>Version ${esc(a.version)}</b><span class="num">${S.updBusy ? (pct != null ? `Downloading, ${pct}%` : 'Downloading…') : 'Ready to install'}</span></span>
+    ${S.updBusy ? '' : '<button class="btn ghost sm" data-act="updlater">Later</button>'}<button class="btn sm" data-act="appinstall"${S.updBusy ? ' disabled' : ''}>${S.updBusy ? 'Updating…' : 'Update'}</button>`;
+}
+
+async function loadUpd(fresh) {
+  try {
+    S.upd = await N.call('update.info');
+    const stale = Date.now() - (S.upd.checkedAt || 0) > 6 * 3.6e6;
+    if (fresh || (stale && S.prefs?.autoUpdate !== false)) { await N.call('update.check'); S.upd = await N.call('update.info'); }
+  } catch {}
+  paintUpd();
+  if (S.tab === 'settings' && S.page === 'app') setPage('app', true);
+}
+
+async function installApp() {
+  if (S.updBusy) return;
+  if (!updReady()) { await loadUpd(true); if (!updReady()) return toast('You have the latest version'); }
+  S.updBusy = true; S.updPct = null; paintUpd(); if (S.page === 'app') setPage('app', true);
+  try {
+    const r = await N.call('update.install');
+    if (r.needsPermission) return ask({
+      title: 'Allow updates from this app', text: 'Android asks once before an app outside the Play Store can install its own updates. Turn on “Allow from this source”, then come back and tap Update again.',
+      yes: 'Open the setting', danger: false, then: () => N.call('update.allow'),
+    });
+    toast('Android asks you to tap Update once.');
+  } catch (e) { fail(e); }
+  finally { S.updBusy = false; S.updPct = null; paintUpd(); if (S.page === 'app') setPage('app', true); }
 }
 
 // ---------- events from the phone ----------
@@ -1378,7 +1410,8 @@ N.on('visible', d => { S.visible = !!d.on; S.liveOn = !S.visible && S.liveOn; wa
 N.on('export', d => toast(d.ok ? 'Saved the record as a spreadsheet file.' : 'Not saved.', d.ok ? 'confirm' : undefined));
 N.on('permission', () => N.call('prefs.get').then(v => { S.prefs = v; if (S.tab === 'settings') setPage(S.page, true); }).catch(() => {}));
 N.on('update', d => {
-  if (d.state === 'downloading' && d.total) toast(`Downloading ${Math.round(d.done / d.total * 100)}%`);
+  if (d.state === 'ready') { if (updReady()?.version !== d.version) loadUpd(); }
+  else if (d.state === 'downloading' && d.total) { S.updPct = Math.round(d.done / d.total * 100); paintUpd(); }
   else if (d.state === 'failed') toast(d.message || 'The update didn’t install.', 'reject');
   else if (d.state === 'installed') toast('Updated.', 'confirm');
 });
@@ -1401,6 +1434,8 @@ function setInsets(d) {
 
 function route(r) {
   if (!r) return;
+  // Updates don't wait for the box: they come from GitHub.
+  if (r === 'update' || r === 'update:go') { nav('now'); return r === 'update:go' ? installApp() : loadUpd(); }
   if (app.classList.contains('out') || !S.st) { S.pendingRoute = r; return; }
   if (r.startsWith('msg:')) { nav('msgs'); openMsg(r.slice(4)); }
   else if (r.startsWith('settings:')) { nav('settings'); setPage(r.slice(9)); }
@@ -1427,6 +1462,7 @@ setInterval(() => {
     onState(h.state);
     if (h.route) route(h.route);
   } catch (e) { console.error(e); }
+  loadUpd();
   N.call('refresh', { clients: true }).then(onState).catch(() => {});
   if (status().smsUnread || viewIsHere()) loadMsgs();
 })();

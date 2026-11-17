@@ -57,6 +57,7 @@ class MiFiApp : Application() {
         web = WebBundle(this)
         updater = Updater(this)
         Notifier.channels(this)
+        updater.tidy()
         devices.listen { emit("state", devices.state()) }
         devices.listen { monitor.readingChanged() }
         watchWifi()

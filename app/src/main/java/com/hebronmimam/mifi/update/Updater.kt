@@ -78,18 +78,29 @@ class Updater(private val app: MiFiApp) {
         return out
     }
 
-    /** Once a day from the background check: take new screens, announce a new APK once. */
+    /** Every 6 hours from the background check: take new screens, announce a new APK once per version. */
     fun dailyCheck() {
-        if (System.currentTimeMillis() - app.prefs.getLong("update:checkedAt") < 24 * 3_600_000L) return
+        if (System.currentTimeMillis() - app.prefs.getLong("update:checkedAt") < 6 * 3_600_000L) return
         val l = check()
         if (l.optBoolean("webNewer")) runCatching { installWeb() }
-        if (l.optBoolean("appNewer")) {
-            val v = l.getJSONObject("app").optString("version")
-            if (app.prefs.getString("update:told") != v) {
-                Notifier.update(app, v)
-                app.prefs.putString("update:told", v)
-            }
+        announce(l)
+    }
+
+    /** Put a new app version in the status bar once, and tell the open screens. */
+    fun announce(l: JSONObject) {
+        if (!l.optBoolean("appNewer")) return
+        val v = l.getJSONObject("app").optString("version")
+        app.emit("update", JSONObject().put("state", "ready").put("version", v))
+        if (app.prefs.getString("update:told") != v) {
+            Notifier.update(app, v)
+            app.prefs.putString("update:told", v)
         }
+    }
+
+    /** After an update installs, the old "ready" notice goes. */
+    fun tidy() {
+        val told = app.prefs.getString("update:told") ?: return
+        if (!newer(told, BuildConfig.VERSION_NAME)) Notifier.clearUpdate(app)
     }
 
     /** Download and apply the newest web screens. Returns the new version, or null. */
@@ -112,7 +123,22 @@ class Updater(private val app: MiFiApp) {
         val a = (latest ?: check()).optJSONObject("app") ?: throw IllegalStateException("No app update")
         val dir = File(app.cacheDir, "updates").apply { mkdirs() }
         val apk = File(dir, "mifi.apk")
-        download(a.getString("url"), apk)
+        val v = a.optString("version")
+        val shown = progress
+        var lastPct = -1
+        progress = { done, total ->
+            val pct = if (total > 0) (done * 100 / total).toInt() else 0
+            if (pct != lastPct) { lastPct = pct; Notifier.updateProgress(app, v, done, total); shown?.invoke(done, total) }
+        }
+        try {
+            download(a.getString("url"), apk)
+        } catch (e: Exception) {
+            Notifier.update(app, v)
+            throw e
+        } finally {
+            progress = shown
+        }
+        Notifier.update(app, v)
         val pi = app.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         params.setAppPackageName(app.packageName)

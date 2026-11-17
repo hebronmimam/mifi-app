@@ -247,6 +247,13 @@ h3.scr{font:300 var(--fs-title)/var(--lh-title) var(--display);margin:var(--s-2)
 .step button{width:var(--s-6);height:var(--s-6);border-radius:var(--r-ctl);border:1px solid var(--line);font-size:18px}
 .step b{min-width:24px;text-align:center;font-weight:500}
 .btn.sm{height:var(--s-5);padding:0 12px;font-size:var(--fs-sec);margin-left:var(--s-2)}
+/* A new app version: one quiet bar at the top of Now. */
+.upd{display:flex;align-items:center;gap:var(--s-2);margin-bottom:var(--s-3);padding:var(--s-3);border:1px solid var(--line);border-radius:var(--s-3);background:var(--raise)}
+.upd[hidden]{display:none}
+.upd .t{flex:1;min-width:0}
+.upd .t b{display:block;font-weight:500}
+.upd .t span{display:block;font-size:var(--fs-sec);line-height:var(--lh-sec);color:var(--mute)}
+.upd .btn.sm{margin-left:0;flex:none}
 .mp-actions{display:grid;gap:var(--s-3);margin-top:var(--s-5)}
 .raw{display:block;width:100%;margin-top:var(--s-5);height:var(--s-7);font-size:var(--fs-sec);color:var(--mute);text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(235,240,250,.25)}
 .ussd-out{border-radius:var(--s-3);background:var(--raise);border:1px solid var(--line);padding:var(--s-3);font-size:var(--fs-sec);line-height:var(--lh-sec);margin:var(--s-3) 0;min-height:84px;white-space:pre-wrap}

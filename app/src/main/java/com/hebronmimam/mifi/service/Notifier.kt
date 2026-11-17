@@ -173,16 +173,39 @@ object Notifier {
         smsSummary(ctx, null)
     }
 
+    /** A new app version: one tap on Update opens the app and starts the install. */
     fun update(ctx: Context, version: String) {
+        val go = Notification.Action.Builder(
+            Icon.createWithResource(ctx, R.drawable.ic_stat_update), "Update", open(ctx, "update:go", ID_UPDATE + 100),
+        ).build()
         val n = builder(ctx, CH_UPDATE)
             .setSmallIcon(R.drawable.ic_stat_update)
             .setContentTitle("MiFi $version is ready")
-            .setContentText("Open the app and tap Install.")
+            .setContentText("Tap Update to install it.")
             .setAutoCancel(true)
-            .setContentIntent(open(ctx, "settings:app", ID_UPDATE))
+            .setContentIntent(open(ctx, "update", ID_UPDATE))
+            .addAction(go)
             .build()
         nm(ctx).notify(ID_UPDATE, n)
     }
+
+    /** The download in the status bar, so leaving the app doesn't hide it. */
+    fun updateProgress(ctx: Context, version: String, done: Long, total: Long) {
+        val pct = if (total > 0) (done * 100 / total).toInt().coerceIn(0, 100) else 0
+        val n = builder(ctx, CH_UPDATE)
+            .setSmallIcon(R.drawable.ic_stat_update)
+            .setContentTitle("Downloading MiFi $version")
+            .setContentText(if (total > 0) "$pct%" else "Starting…")
+            .setProgress(100, pct, total <= 0)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setContentIntent(open(ctx, "update", ID_UPDATE))
+            .build()
+        nm(ctx).notify(ID_UPDATE, n)
+    }
+
+    fun clearUpdate(ctx: Context) = nm(ctx).cancel(ID_UPDATE)
 
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)
 }

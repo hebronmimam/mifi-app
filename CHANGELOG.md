@@ -13,6 +13,7 @@ All notable changes to this app. Versions follow [semantic versioning](https://s
 - New texts stay in the notification shade in their own group. Before, Android tucked them under the battery notification.
 - Joining another box's Wi-Fi shows that box straight away. A MiFi and a router can share one address, so the app now notices the Wi-Fi itself changed.
 - Coming back to the app no longer hides the tabs while the box's session renews.
+- Updates: a new version shows as a bar on Now and as a notification with an Update button. One tap downloads it, with progress in the status bar, and Android asks you to confirm once. The app looks every 6 hours, and when you open it.
 
 ## [1.0.0] - 2026-11-17
 

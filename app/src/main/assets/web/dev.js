@@ -6,6 +6,9 @@
 (() => {
 const mode = new URLSearchParams(location.search).get('s') || 'mifi';
 const router = mode === 'router';
+// ?update=1 pretends a newer app version is on GitHub.
+const upd = new URLSearchParams(location.search).get('update')
+  ? { appNewer: true, webNewer: false, app: { version: '1.2.0', size: 2.1e6 } } : { appNewer: false, webNewer: false };
 const now = Date.now(), H = ms => Math.floor(ms / 3.6e6), hr = H(now);
 const ME = 'AA:BB:CC:00:00:01';
 const clients = [
@@ -101,8 +104,8 @@ const api = {
   'device.list': () => state().devices,
   'device.select': a => { sel = a.id; return state(); },
   'device.rename': a => { devices.find(d => d.id === a.id).name = a.name; return state(); },
-  'update.info': () => ({ app: '1.0.0-dev', web: 1, repo: 'hebronmimam/mifi-app', checkedAt: now - 5 * 3600e3, latest: { appNewer: false, webNewer: false } }),
-  'update.check': () => ({ appNewer: false, webNewer: false }),
+  'update.info': () => ({ app: '1.0.0-dev', web: 1, repo: 'hebronmimam/mifi-app', checkedAt: now - 5 * 3600e3, latest: upd }),
+  'update.check': () => upd,
   'update.web': () => false, 'update.install': () => ({ needsPermission: true }),
   'battery.isExempt': () => false,
 };

@@ -53,7 +53,7 @@ The same MiFi, on the same phone, a minute apart.
 | **Block devices** | Keep a device off the box's Wi-Fi, and let it back on, from the app. |
 | **Settings** | Wi-Fi sleep, network mode, connect and disconnect, UPnP, restart, shut down and factory reset. |
 | **Stays signed in** | Type the admin password once. It stays on your phone, encrypted by Android. |
-| **Updates itself** | New screens install by themselves. A new app version asks you for one tap to install. |
+| **Updates itself** | New screens install by themselves. A new app version shows in the app and in your status bar, with a one-tap Update. |
 | **Nothing changed on the box** | It uses the box's own web API. No firmware changes and nothing installed on the MiFi or router. |
 
 ## Install
@@ -160,7 +160,7 @@ tools/release.mjs          Builds, signs and publishes a release
 
 ### Updates
 
-The app checks this repository's releases once a day. When it finds a newer `web-<n>.zip`, it checks the zip's signature against `keys/web-bundle.pub` and swaps the screens in without asking. If the signature doesn't match, the zip is never loaded. A new app version is an APK on a `v<version>` release. The app downloads it, and then Android asks you to tap Install.
+The app checks this repository's releases every 6 hours, and when you open it. When it finds a newer `web-<n>.zip`, it checks the zip's signature against `keys/web-bundle.pub` and swaps the screens in without asking. If the signature doesn't match, the zip is never loaded. A new app version is an APK on a `v<version>` release. The app shows a bar on Now and a notification with an Update button. One tap downloads it, and then Android asks you to confirm.
 
 ### Releasing
 
