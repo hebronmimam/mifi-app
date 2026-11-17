@@ -109,6 +109,13 @@ class UsageDb(ctx: Context) : SQLiteOpenHelper(ctx, "usage.db", null, 1) {
         writableDatabase.execSQL("UPDATE clients SET alias=? WHERE dev=? AND mac=?", arrayOf(alias?.trim()?.take(40)?.ifEmpty { null }, dev, mac))
     }
 
+    /** The names the owner gave devices on this box, by upper-case MAC. */
+    fun aliases(dev: String): Map<String, String> = runCatching {
+        readableDatabase.rawQuery("SELECT UPPER(mac), alias FROM clients WHERE dev=? AND alias IS NOT NULL", arrayOf(dev)).use { c ->
+            buildMap { while (c.moveToNext()) put(c.getString(0), c.getString(1)) }
+        }
+    }.getOrDefault(emptyMap())
+
     fun info(): JSONObject {
         val db = readableDatabase
         fun count(t: String) = db.rawQuery("SELECT COUNT(*) FROM $t", null).use { it.moveToFirst(); it.getLong(0) }

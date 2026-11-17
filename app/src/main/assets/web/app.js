@@ -1342,7 +1342,8 @@ async function loadUpd(fresh) {
   try {
     S.upd = await N.call('update.info');
     const stale = Date.now() - (S.upd.checkedAt || 0) > 6 * 3.6e6;
-    if (fresh || (stale && S.prefs?.autoUpdate !== false)) { await N.call('update.check'); S.upd = await N.call('update.info'); }
+    // A restarted app has nothing in hand yet, so it looks again on opening.
+    if (fresh || ((stale || !S.upd.latest) && S.prefs?.autoUpdate !== false)) { await N.call('update.check'); S.upd = await N.call('update.info'); }
   } catch {}
   paintUpd();
   if (S.tab === 'settings' && S.page === 'app') setPage('app', true);
@@ -1355,8 +1356,8 @@ async function installApp() {
   try {
     const r = await N.call('update.install');
     if (r.needsPermission) return ask({
-      title: 'Allow updates from this app', text: 'Android asks once before an app outside the Play Store can install its own updates. Turn on “Allow from this source”, then come back and tap Update again.',
-      yes: 'Open the setting', danger: false, then: () => N.call('update.allow'),
+      title: 'Allow updates from this app', text: 'Android asks once before an app outside the Play Store can install its own updates. Turn on “Allow from this source”, then come back. The update carries on by itself.',
+      yes: 'Open settings', danger: false, then: () => { S.updAfterAllow = true; return N.call('update.allow'); },
     });
     toast('Android asks you to tap Update once.');
   } catch (e) { fail(e); }
@@ -1406,7 +1407,11 @@ N.on('usage', d => {
 });
 N.on('route', d => route(d.route));
 N.on('insets', setInsets);
-N.on('visible', d => { S.visible = !!d.on; S.liveOn = !S.visible && S.liveOn; wantLive(); if (d.on) { loadToday(); if (S.tab === 'msgs') loadMsgs(); } });
+N.on('visible', d => { S.visible = !!d.on; S.liveOn = !S.visible && S.liveOn; wantLive(); if (d.on) {
+  loadToday(); if (S.tab === 'msgs') loadMsgs();
+  // Back from Android's "Allow from this source": carry on with the update the owner asked for.
+  if (S.updAfterAllow) { S.updAfterAllow = false; N.call('update.canInstall').then(ok => { if (ok) installApp(); }).catch(() => {}); }
+} });
 N.on('export', d => toast(d.ok ? 'Saved the record as a spreadsheet file.' : 'Not saved.', d.ok ? 'confirm' : undefined));
 N.on('permission', () => N.call('prefs.get').then(v => { S.prefs = v; if (S.tab === 'settings') setPage(S.page, true); }).catch(() => {}));
 N.on('update', d => {

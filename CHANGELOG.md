@@ -2,6 +2,14 @@
 
 All notable changes to this app. Versions follow [semantic versioning](https://semver.org).
 
+## [1.1.1] - 2026-11-17
+
+- The update notice now stands on its own in the notification shade. Android 15 had folded it in under the battery notice.
+- Opening the app always looks for a new version if it hasn't found one yet, even after the phone restarts.
+- After you allow updates from this app in Android's settings, the update carries on by itself when you come back.
+- Expand the battery notification to see who is connected right now: you first, then one more by the name you gave it, and how many others. Addresses are never shown there.
+- Button labels no longer break onto two lines with large phone text. Two that don't fit side by side stack instead.
+
 ## [1.1.0] - 2026-11-17
 
 - New USSD tab. Check balance is its first option, then codes you sent before, then any code. Set your network's balance code once if it isn't MTN.
@@ -28,5 +36,6 @@ The first release.
 - The screens update themselves from signed releases. A new app version installs with one tap.
 - Supports ZTE goform MiFis (such as the MTN U10LS) and Tozed ZLT home routers.
 
+[1.1.1]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.1
 [1.1.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.0.0

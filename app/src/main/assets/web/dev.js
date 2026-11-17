@@ -105,7 +105,7 @@ const api = {
   'device.select': a => { sel = a.id; return state(); },
   'device.rename': a => { devices.find(d => d.id === a.id).name = a.name; return state(); },
   'update.info': () => ({ app: '1.0.0-dev', web: 1, repo: 'hebronmimam/mifi-app', checkedAt: now - 5 * 3600e3, latest: upd }),
-  'update.check': () => upd,
+  'update.check': () => upd, 'update.canInstall': () => false,
   'update.web': () => false, 'update.install': () => ({ needsPermission: true }),
   'battery.isExempt': () => false,
 };

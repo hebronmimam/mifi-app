@@ -28,6 +28,9 @@ object Notifier {
     const val ID_UPDATE = 3
     const val ID_HOT = 4
     private const val ID_SMS_SUMMARY = 5
+    private const val ID_UPDATE_SUMMARY = 6
+    private const val GROUP_UPDATE = "update"
+    private const val MAX_LINES = 2
     private const val ID_SMS_BASE = 1000
     private const val GROUP_SMS = "sms"
     private const val GROUP_STATUS = "status"
@@ -62,10 +65,19 @@ object Notifier {
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(ctx, ch) else @Suppress("DEPRECATION") Notification.Builder(ctx)
 
     /** The always-on notification whose small icon is the battery number. */
-    fun status(ctx: Context, percent: Int?, title: String, text: String): Notification {
+    fun status(ctx: Context, percent: Int?, title: String, text: String, devices: List<String> = emptyList()): Notification {
         val b = builder(ctx, CH_STATUS)
             .setContentTitle(title)
             .setContentText(text)
+        // Expanded, it lists who is connected.
+        if (devices.isNotEmpty()) {
+            val style = Notification.InboxStyle().setBigContentTitle(title)
+            devices.take(MAX_LINES).forEach { style.addLine(it) }
+            val more = devices.size - MAX_LINES
+            if (more > 0) style.addLine(if (more == 1) "+1 other" else "+$more others")
+            b.setStyle(style)
+        }
+        b
             .setOngoing(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
@@ -185,8 +197,27 @@ object Notifier {
             .setAutoCancel(true)
             .setContentIntent(open(ctx, "update", ID_UPDATE))
             .addAction(go)
+            .setGroup(GROUP_UPDATE)
             .build()
         nm(ctx).notify(ID_UPDATE, n)
+        updateSummary(ctx, "MiFi $version is ready")
+    }
+
+    /**
+     * Android 15 folds a notice that is alone in its group into one bundle with the
+     * battery notice, where nobody sees it. A real group (summary + notice) stays apart.
+     */
+    private fun updateSummary(ctx: Context, title: String) {
+        val s = builder(ctx, CH_UPDATE)
+            .setSmallIcon(R.drawable.ic_stat_update)
+            .setContentTitle(title)
+            .setGroup(GROUP_UPDATE)
+            .setGroupSummary(true)
+            .setOnlyAlertOnce(true)
+            .setAutoCancel(true)
+            .setContentIntent(open(ctx, "update", ID_UPDATE))
+        if (Build.VERSION.SDK_INT >= 26) s.setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
+        nm(ctx).notify(ID_UPDATE_SUMMARY, s.build())
     }
 
     /** The download in the status bar, so leaving the app doesn't hide it. */
@@ -201,11 +232,13 @@ object Notifier {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setContentIntent(open(ctx, "update", ID_UPDATE))
+            .setGroup(GROUP_UPDATE)
             .build()
         nm(ctx).notify(ID_UPDATE, n)
+        updateSummary(ctx, "Downloading MiFi $version")
     }
 
-    fun clearUpdate(ctx: Context) = nm(ctx).cancel(ID_UPDATE)
+    fun clearUpdate(ctx: Context) { nm(ctx).cancel(ID_UPDATE); nm(ctx).cancel(ID_UPDATE_SUMMARY) }
 
     private fun nm(ctx: Context) = ctx.getSystemService(NotificationManager::class.java)
 }

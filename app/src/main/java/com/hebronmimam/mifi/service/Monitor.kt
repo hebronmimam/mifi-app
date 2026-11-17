@@ -49,7 +49,7 @@ class Monitor(private val app: MiFiApp) {
     }
 
     @Volatile private var shown: String? = null
-    private fun key(s: Status?) = s?.let { "${app.devices.id}|${it.battery}|${it.charging}|${it.connected}|${it.network}|${it.clients?.size}" }
+    private fun key(s: Status?) = s?.let { "${app.devices.id}|${it.battery}|${it.charging}|${it.connected}|${it.network}|${it.clients?.joinToString(",") { c -> c.mac + c.name }}" }
 
     /** Any fresh reading (the app open, a sign-in) also updates the status bar, not only the timed check. */
     fun readingChanged() {
@@ -132,7 +132,20 @@ class Monitor(private val app: MiFiApp) {
             val title = if (s.battery != null) "$name · ${s.battery}%" + (if (s.charging) " · charging" else "") else name
             // The number is the icon only while "Battery in the status bar" is on; otherwise the app's own icon.
             val percent = if (app.prefs.statusBar && (s.kind == Mifi.KIND || s.battery != null)) s.battery else null
-            return Notifier.status(ctx, percent, title, parts.joinToString(" · ").ifEmpty { "Connected" })
+            return Notifier.status(ctx, percent, title, parts.joinToString(" · ").ifEmpty { "Connected" }, deviceLines(app, id, s))
+        }
+
+        /** Who is on the box now, for the expanded notification: the owner's names first, this phone marked. */
+        private fun deviceLines(app: MiFiApp, id: String?, s: Status): List<String> {
+            val list = s.clients ?: return emptyList()
+            val names = id?.let { app.usage.aliases(it) } ?: emptyMap()
+            val me = app.lan.myIp()
+            // Names only: addresses stay out of the shade, which shows on the lock screen too. This phone is "You".
+            val (mine, others) = list.partition { me != null && it.ip == me }
+            return mine.map { "You" } + others.map { c ->
+                val n = names[c.mac.uppercase()] ?: c.name?.takeIf { it.isNotBlank() && it != "*" } ?: "Unnamed device"
+                if (c.wifi) n else "$n · cable"
+            }
         }
     }
 }
