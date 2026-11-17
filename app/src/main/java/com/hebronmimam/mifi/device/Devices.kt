@@ -34,17 +34,22 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
     fun unlisten(l: () -> Unit) = listeners.remove(l)
     private fun changed() = listeners.forEach { runCatching { it() } }
 
-    /** The box at the Wi-Fi gateway, probing again when the gateway changed. */
+    /** The Wi-Fi the current box was found on. A MiFi and a router can share 192.168.0.1, so the address alone can't tell them apart. */
+    @Volatile private var foundOn: String? = null
+
+    /** The box at the Wi-Fi gateway, probing again when the Wi-Fi or its gateway changed. */
     fun find(force: Boolean = false): Box? = synchronized(lock) {
-        val gw = lan.gateway()
+        val net = lan.wifi()
+        val gw = lan.gateway(net)
         if (gw == null) {
-            if (box != null || problem != "wifi") { box = null; id = null; problem = "wifi"; changed() }
+            if (box != null || problem != "wifi") { box = null; id = null; foundOn = null; problem = "wifi"; changed() }
             return null
         }
-        box?.let { if (it.host == gw && !force) return it }
+        val on = "$net|$gw"
+        box?.let { if (it.host == gw && on == foundOn && !force) return it }
         val found = listOf<Box>(Mifi(lan, gw, ::scheme), Router(lan, gw)).firstOrNull { it.probe() }
         if (found == null) {
-            box = null; id = null
+            box = null; id = null; foundOn = null
             problem = "unknown"
             changed()
             return null
@@ -52,7 +57,7 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
         val newId = "${found.kind}:${found.model ?: found.kind}"
         // A different box: the last reading belongs to the old one, so it must not show (or name) this one.
         if (newId != id) { needsSignIn = false; lockedUntil = 0; last = null; lastAt = 0 }
-        box = found; id = newId; problem = null
+        box = found; id = newId; foundOn = on; problem = null
         register(found, newId)
         changed()
         found
@@ -176,7 +181,12 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
 
     fun live(): JSONObject? {
         val b = box ?: return null
-        val o = runCatching { synchronized(lock) { b.live() } }.getOrNull() ?: return null
+        // A session that timed out while the app was away signs itself back in here, once.
+        val o = runCatching {
+            synchronized(lock) {
+                try { b.live() } catch (e: NotSignedIn) { ensure(b); b.live() }
+            }
+        }.getOrNull() ?: return null
         // The live tick carries the battery too: keep the reading (and the status bar) in step with it.
         val l = last
         if (l != null && o.has("battery") && !o.isNull("battery")) {
@@ -223,7 +233,10 @@ class Devices(private val lan: Lan, private val prefs: Prefs, private val secret
             "name" to dev?.optString("name"),
             "selected" to prefs.selected,
             "problem" to problem,
-            "signedIn" to (box?.hasSession == true),
+            // A box's session ends on its own while the app is away. With a stored password the app signs
+            // back in on the next call, so the screens stay as they were instead of flashing signed out.
+            "signedIn" to (box?.hasSession == true ||
+                (box != null && hasPassword() && !needsSignIn && System.currentTimeMillis() >= lockedUntil)),
             // No password in the app means the form shows, even when the box has a session: a session
             // the browser opened ends on its own, and the app could not sign itself back in.
             "needsSignIn" to (needsSignIn || (box != null && !hasPassword())),

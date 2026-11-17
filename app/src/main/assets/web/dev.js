@@ -81,6 +81,7 @@ const api = {
     if (p.BearerPreference) mifiFields.net_select = p.BearerPreference; if (p.ConnectionMode) mifiFields.ConnectionMode = p.ConnectionMode; if (p.upnp_setting_option) mifiFields.upnpEnabled = p.upnp_setting_option; return { result: 'success' }; },
   'router.call': a => ({ 230: { ssid: 'Home-2.4G', enable: '1' }, 231: { ssid: 'Home-5G', enable: '1' }, 248: { apn: 'web.example' }, 561: { ussd_result: 'Balance: 12.0 GB.' } }[a.body.cmd] || {}),
   'sms.list': () => msgs, 'sms.read': a => { msgs.forEach(m => a.ids.includes(m.id) && (m.unread = false)); return true; },
+  'sms.unread': a => { msgs.forEach(m => a.ids.includes(m.id) && (m.unread = true)); return true; },
   'sms.delete': a => { a.ids.forEach(i => msgs.splice(msgs.findIndex(m => m.id === i), 1)); return true; },
   'sms.send': a => { msgs.unshift({ id: String(Date.now()), number: a.number, text: a.text, time: Date.now(), unread: false, outgoing: true }); return true; },
   'usage.hours': a => rows.filter(r => r[0] >= a.from && r[0] < a.to),

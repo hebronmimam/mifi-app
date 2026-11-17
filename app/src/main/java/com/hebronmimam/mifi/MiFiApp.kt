@@ -1,6 +1,11 @@
 package com.hebronmimam.mifi
 
 import android.app.Application
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import com.hebronmimam.mifi.core.Prefs
 import com.hebronmimam.mifi.core.Secrets
 import com.hebronmimam.mifi.device.Devices
@@ -15,6 +20,7 @@ import org.json.JSONObject
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MiFiApp : Application() {
     lateinit var prefs: Prefs; private set
@@ -53,5 +59,34 @@ class MiFiApp : Application() {
         Notifier.channels(this)
         devices.listen { emit("state", devices.state()) }
         devices.listen { monitor.readingChanged() }
+        watchWifi()
+    }
+
+    /**
+     * Joining another Wi-Fi (the MiFi's or the router's) finds the box there at once, instead of
+     * waiting for the next check. Both boxes can sit at 192.168.0.1, so the network itself is what changed.
+     */
+    private fun watchWifi() {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return
+        val req = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
+        val pending = AtomicBoolean(false)
+        fun recheck() {
+            if (!pending.compareAndSet(false, true)) return
+            io.execute {
+                pending.set(false)
+                runCatching {
+                    val before = devices.id
+                    val b = devices.find()
+                    if (b != null && (devices.id != before || devices.last == null)) devices.refresh()
+                }
+            }
+        }
+        runCatching {
+            cm.registerNetworkCallback(req, object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) = recheck()
+                override fun onLost(network: Network) = recheck()
+                override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) = recheck()
+            })
+        }
     }
 }

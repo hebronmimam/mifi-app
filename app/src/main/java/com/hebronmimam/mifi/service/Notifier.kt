@@ -27,7 +27,10 @@ object Notifier {
     const val ID_LOW = 2
     const val ID_UPDATE = 3
     const val ID_HOT = 4
+    private const val ID_SMS_SUMMARY = 5
     private const val ID_SMS_BASE = 1000
+    private const val GROUP_SMS = "sms"
+    private const val GROUP_STATUS = "status"
 
     fun channels(ctx: Context) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -66,6 +69,7 @@ object Notifier {
             .setOngoing(true)
             .setShowWhen(false)
             .setOnlyAlertOnce(true)
+            .setGroup(GROUP_STATUS) // its own group, so Android never bundles the texts under it
             .setContentIntent(open(ctx, null, 0))
             .setColor(0xFFBCF500.toInt())
         if (Build.VERSION.SDK_INT >= 23 && percent != null) b.setSmallIcon(Icon.createWithBitmap(numberIcon(percent)))
@@ -115,8 +119,12 @@ object Notifier {
         nm(ctx).notify(ID_HOT, n)
     }
 
+    /**
+     * Texts go in their own group with a summary. Without one, Android bundles them under the
+     * always-on battery notification, which hides them in the silent section once the alert is gone.
+     */
     fun sms(ctx: Context, deviceName: String, m: Message) {
-        val id = ID_SMS_BASE + (m.id.hashCode() and 0x7fff)
+        val id = smsId(m.id)
         val n = builder(ctx, CH_SMS)
             .setSmallIcon(R.drawable.ic_stat_sms)
             .setContentTitle(m.number.ifBlank { deviceName })
@@ -127,13 +135,42 @@ object Notifier {
             .setShowWhen(true)
             .setAutoCancel(true)
             .setColor(0xFFBCF500.toInt())
+            .setGroup(GROUP_SMS)
             .setContentIntent(open(ctx, "msg:${m.id}", id))
             .build()
         nm(ctx).notify(id, n)
+        smsSummary(ctx, deviceName)
+    }
+
+    private fun smsId(msgId: String) = ID_SMS_BASE + (msgId.hashCode() and 0x7fff)
+
+    /** The group's summary, or nothing once the last text is gone. */
+    private fun smsSummary(ctx: Context, deviceName: String?) {
+        if (Build.VERSION.SDK_INT < 24) return
+        val shown = nm(ctx).activeNotifications.filter { it.id >= ID_SMS_BASE && it.notification.group == GROUP_SMS }
+        if (shown.isEmpty()) { nm(ctx).cancel(ID_SMS_SUMMARY); return }
+        val style = Notification.InboxStyle()
+        shown.sortedByDescending { it.notification.`when` }.take(5).forEach {
+            val x = it.notification.extras
+            style.addLine("${x.getCharSequence(Notification.EXTRA_TITLE) ?: ""}  ${x.getCharSequence(Notification.EXTRA_TEXT) ?: ""}")
+        }
+        val count = if (shown.size == 1) "1 new text" else "${shown.size} new texts"
+        val n = builder(ctx, CH_SMS)
+            .setSmallIcon(R.drawable.ic_stat_sms)
+            .setContentTitle(count)
+            .setStyle(style.setSummaryText(deviceName))
+            .setColor(0xFFBCF500.toInt())
+            .setGroup(GROUP_SMS)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .setContentIntent(open(ctx, null, ID_SMS_SUMMARY))
+        if (Build.VERSION.SDK_INT >= 26) n.setGroupAlertBehavior(Notification.GROUP_ALERT_CHILDREN)
+        nm(ctx).notify(ID_SMS_SUMMARY, n.build())
     }
 
     fun clearSms(ctx: Context, ids: List<String>) {
-        ids.forEach { nm(ctx).cancel(ID_SMS_BASE + (it.hashCode() and 0x7fff)) }
+        ids.forEach { nm(ctx).cancel(smsId(it)) }
+        smsSummary(ctx, null)
     }
 
     fun update(ctx: Context, version: String) {

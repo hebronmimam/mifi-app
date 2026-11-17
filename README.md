@@ -24,7 +24,7 @@
 
 <p align="center">
   <img src="docs/screenshots/now.png" width="19%" alt="Now: battery dial, download and upload speed, the last minute, signal, delay and today's data">
-  <img src="docs/screenshots/messages.png" width="19%" alt="Messages: the box's texts and balance codes">
+  <img src="docs/screenshots/messages.png" width="19%" alt="Messages: the box's texts, with an unread badge">
   <img src="docs/screenshots/usage.png" width="19%" alt="Usage: data used this month, split by device">
   <img src="docs/screenshots/settings.png" width="19%" alt="Settings: internet, Wi-Fi and battery options">
   <img src="docs/screenshots/router.png" width="19%" alt="Now, for a home router: signal dial instead of battery">
@@ -47,8 +47,10 @@ The same MiFi, on the same phone, a minute apart.
 |---|---|
 | **Battery in the status bar** | The MiFi's battery percentage is the notification icon, so you see it without opening anything. One alert at 20%. |
 | **Live speed** | Download and upload right now, with the last minute as a chart. |
-| **Texts** | New texts on the box arrive as normal Android notifications. Read, reply, write, delete, and send balance codes (USSD) and read the reply. |
-| **Data used** | Day, week, month, year or all time. Who used what, kept until you clear it. Export it as CSV. |
+| **Texts** | New texts on the box arrive as normal Android notifications. Read, reply, write and delete, one at a time or several at once. Mark texts unread, or read all. |
+| **USSD** | Check your balance in one tap, or send any network code and read the reply. |
+| **Data used** | This month's total from the box's own counter. Day, week, month, year or all time, and who was on when. Kept until you clear it. Export it as CSV. |
+| **Block devices** | Keep a device off the box's Wi-Fi, and let it back on, from the app. |
 | **Settings** | Wi-Fi sleep, network mode, connect and disconnect, UPnP, restart, shut down and factory reset. |
 | **Stays signed in** | Type the admin password once. It stays on your phone, encrypted by Android. |
 | **Updates itself** | New screens install by themselves. A new app version asks you for one tap to install. |
@@ -82,7 +84,7 @@ Every box speaks its own web API, so I need one in my hands to add it. You can b
 
 **Speed is live traffic, not a speed test.** About once a second the app asks the box how many bytes it moved, for every device connected to it. Boxes add to that count in bursts, so the app shows the average of the last 3 seconds. When nothing is downloading, it reads close to 0.
 
-**Data used per device.** Neither box counts data per device. They only count the whole SIM. So this phone's data is exact (Android counts it), and every other device shows the least and the most it could have used, worked out from who was online each hour.
+**Data used per device.** Neither box counts data per device. They only count the whole SIM. So this phone's data is exact (Android counts it), and every other device shows how long it was on. When a device was the only other one online, the app can also say it used at least that much. This month's total is the box's own counter, so it includes what was used before you installed the app.
 
 **Battery checks.** A small foreground service checks every 5 minutes, every minute while the battery is low or the internet is down, and every 15 minutes in battery saver.
 
@@ -125,7 +127,7 @@ The box locks sign-in after a few wrong tries. The app shows how long until you 
 </details>
 
 <details>
-<summary><b>Why does another device show a range instead of an exact number?</b></summary>
+<summary><b>Why does another device show hours instead of data?</b></summary>
 
 The box doesn't count data per device. See [How it works](#how-it-works).
 </details>

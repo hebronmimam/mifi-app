@@ -2,6 +2,18 @@
 
 All notable changes to this app. Versions follow [semantic versioning](https://semver.org).
 
+## [1.1.0] - 2026-11-17
+
+- New USSD tab. Check balance is its first option, then codes you sent before, then any code. Set your network's balance code once if it isn't MTN.
+- Messages: pick several texts (tap Select, or long-press one) to mark them read, mark them unread, or delete them. Read all marks every text read. A single text can be marked unread too. Unread marks are kept on your phone, because neither box can set one.
+- Block a device from its record in Usage, and unblock it. The app writes the box's own Wi-Fi block list and reads it back before it says it worked. On a router this restarts the Wi-Fi for a few seconds and turns off WPS, which the router keeps off while blocking.
+- Usage: this month's total now comes from the box's own counter, so it includes everything used before the app started recording.
+- Usage: other devices show how long they were on, and "at least" an amount when it can be told apart. They no longer all show the same range.
+- Usage: the period picker glides between Day, Week, Month, Year and All, like the tab bar.
+- New texts stay in the notification shade in their own group. Before, Android tucked them under the battery notification.
+- Joining another box's Wi-Fi shows that box straight away. A MiFi and a router can share one address, so the app now notices the Wi-Fi itself changed.
+- Coming back to the app no longer hides the tabs while the box's session renews.
+
 ## [1.0.0] - 2026-11-17
 
 The first release.
@@ -15,4 +27,5 @@ The first release.
 - The screens update themselves from signed releases. A new app version installs with one tap.
 - Supports ZTE goform MiFis (such as the MTN U10LS) and Tozed ZLT home routers.
 
+[1.1.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hebronmimam/mifi-app/releases/tag/v1.0.0

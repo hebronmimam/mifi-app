@@ -79,7 +79,7 @@ class WebBundle(private val ctx: Context) {
 
     companion object {
         /** Bumped when the bridge gains calls that new web screens depend on. */
-        const val NATIVE_API = 1
+        const val NATIVE_API = 2
 
         fun verify(file: File, signature: ByteArray): Boolean {
             val key = BuildConfig.WEB_BUNDLE_KEY.trim()

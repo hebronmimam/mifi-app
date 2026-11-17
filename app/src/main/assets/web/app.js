@@ -91,6 +91,7 @@ const fmt = b => {
   if (b < 1e9) return `${Math.round(b / 1e6)} MB`;
   return `${(b / 1e9).toFixed(1)} GB`;
 };
+const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const rng = (lo, hi) => lo < 5e5 ? `up to ${fmt(hi)}` : lo >= 1e9 && hi >= 1e9 ? `${(lo / 1e9).toFixed(1)}–${(hi / 1e9).toFixed(1)} GB` : `${fmt(lo)}–${fmt(hi)}`;
 const dur = sec => {
   if (sec == null) return '';
@@ -413,12 +414,14 @@ function renameSheet(title, value, act) {
 // ---------- tabs ----------
 function nav(id) {
   S.tab = id;
+  S.sel = null; paintSelBar();
   $$('[data-screen]').forEach(s => s.hidden = s.dataset.screen !== id);
   $$('[data-tabs] button').forEach(b => b.dataset.go === id ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'));
   const s = $(`[data-screen="${id}"]`); if (s) s.scrollTop = 0;
   closeSheet();
   if (id === 'msgs') { S.msg = null; renderMsgs(); loadMsgs(); }
   if (id === 'usage') loadUsage();
+  if (id === 'ussd') { S.ussdHere = viewIsHere(); renderUssd(); }
   if (id === 'settings') setPage('index');
   lensTo($(`[data-go="${id}"]`, tabsEl), true);
   wantLive();
@@ -468,24 +471,79 @@ function renderMsgs() {
     el.innerHTML = `<button class="back" data-act="msgback">‹ Messages</button><h3 class="scr">${esc(from(m))}</h3>
       <p class="msg-meta">${whenFull(m.time)}, on ${esc(devName())}</p>
       <div class="bubble${m.outgoing ? ' out' : ''}">${esc(m.text)}</div>
-      <div class="mp-actions">${m.outgoing ? '' : '<button class="btn ghost" data-act="reply">Reply</button>'}<button class="btn danger" data-act="delmsg">Delete</button></div>`;
+      <div class="mp-actions">${m.outgoing ? '' : '<button class="btn ghost" data-act="reply">Reply</button><button class="btn ghost" data-act="unreadmsg">Mark as unread</button>'}<button class="btn danger" data-act="delmsg">Delete</button></div>`;
     if (m.unread) {
       m.unread = false; badge();
       N.call('sms.read', { ids: [m.id] }).catch(() => {});
     }
+    paintSelBar();
     return;
   }
-  const code = balanceCode();
   let body;
   if (!S.msgs && S.msgErr) {
     const e = S.msgErr;
     body = `<p class="empty">${e.code === 'away' ? `Messages live on the ${what()}. Join its Wi-Fi to read them.` : e.code === 'signin' ? `Sign in to the ${what()} on the Now screen to read its messages.` : `Can’t reach the ${what()} right now.`}</p>`;
   } else if (!S.msgs) body = '<p class="empty">Reading the messages…</p>';
   else if (!S.msgs.length) body = `<p class="empty">No texts on the ${what()}.</p>`;
-  else body = S.msgs.map(x => `<button class="li msg" data-msg="${esc(x.id)}"><span class="on-dot${x.unread && !x.outgoing ? '' : ' none'}" ${x.unread && !x.outgoing ? 'aria-label="Unread"' : 'aria-hidden="true"'}></span><div class="t"><b>${esc(from(x))}</b><span>${esc(x.text)}</span></div><span class="v small">${when(x.time)}</span></button>`).join('');
-  el.innerHTML = `<h3 class="scr">Messages</h3><div class="list">${body}
-    <button class="li" data-act="ussdsheet"><div class="t"><b>Check balance</b><span>${code ? `Sends ${esc(code)} and shows the reply` : 'Send a code and read the reply'}</span></div>${chev}</button></div>
-    <div class="mp-actions"><button class="btn ghost" data-act="newsms"${viewIsHere() ? '' : ' disabled'}>New message</button></div>`;
+  else if (S.sel) body = S.msgs.map(x => {
+    const on = S.sel.has(x.id), un = x.unread && !x.outgoing;
+    return `<button class="li msg${un ? ' unread' : ''}" role="checkbox" aria-checked="${on}" data-pick="${esc(x.id)}"><span class="ck" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span><div class="t"><b>${esc(from(x))}</b><span>${un ? '<i class="sr">Unread. </i>' : ''}${esc(x.text)}</span></div><span class="v small">${when(x.time)}</span></button>`;
+  }).join('');
+  else body = S.msgs.map(x => `<button class="li msg${x.unread && !x.outgoing ? ' unread' : ''}" data-msg="${esc(x.id)}"><span class="on-dot${x.unread && !x.outgoing ? '' : ' none'}" ${x.unread && !x.outgoing ? 'aria-label="Unread"' : 'aria-hidden="true"'}></span><div class="t"><b>${esc(from(x))}</b><span>${esc(x.text)}</span></div><span class="v small">${when(x.time)}</span></button>`).join('');
+  const unread = (S.msgs || []).filter(x => x.unread && !x.outgoing).length;
+  let head;
+  if (S.sel) {
+    const all = S.msgs?.length && S.sel.size === S.msgs.length;
+    head = `<div class="msg-head"><h3 class="scr" aria-live="polite">${S.sel.size ? `${S.sel.size} selected` : 'Select texts'}</h3>
+      <button class="hd-act" data-act="selall">${all ? 'None' : 'All'}</button><button class="hd-act" data-act="selend">Done</button></div>`;
+  } else {
+    head = `<div class="msg-head"><h3 class="scr">Messages</h3>
+      ${unread ? '<button class="hd-act" data-act="readall">Read all</button>' : ''}${S.msgs?.length ? '<button class="hd-act" data-act="selstart">Select</button>' : ''}</div>`;
+  }
+  el.innerHTML = `${head}<div class="list">${body}</div>
+    ${S.sel ? '' : `<div class="mp-actions"><button class="btn ghost" data-act="newsms"${viewIsHere() ? '' : ' disabled'}>New message</button></div>`}`;
+  paintSelBar();
+}
+
+/** While texts are being picked, the tab bar gives way to what can be done with them. */
+function paintSelBar() {
+  const on = !!S.sel && S.tab === 'msgs' && !S.msg;
+  app.classList.toggle('selecting', on);
+  const bar = $('[data-selbar]');
+  bar.hidden = !on;
+  if (!on) return;
+  const n = S.sel.size, picked = (S.msgs || []).filter(x => S.sel.has(x.id) && !x.outgoing);
+  const can = { selread: picked.some(x => x.unread), selunread: picked.some(x => !x.unread), seldel: n > 0 };
+  $$('button', bar).forEach(b => b.disabled = !can[b.dataset.act]);
+}
+
+function selEnd() { S.sel = null; renderMsgs(); }
+
+/** Read, unread or delete the picked texts. The list changes once the box says yes. */
+async function selDo(kind, ids = [...(S.sel || [])]) {
+  const w = what();
+  const find = id => S.msgs?.find(x => x.id === id);
+  try {
+    if (kind === 'read') {
+      const todo = ids.filter(id => find(id)?.unread);
+      if (!todo.length) return;
+      await N.call('sms.read', { ids: todo });
+      todo.forEach(id => find(id).unread = false);
+      toast(todo.length === 1 ? 'Marked as read' : `${todo.length} marked as read`, 'confirm');
+    } else if (kind === 'unread') {
+      const todo = ids.filter(id => { const x = find(id); return x && !x.unread && !x.outgoing; });
+      if (!todo.length) return;
+      await N.call('sms.unread', { ids: todo });
+      todo.forEach(id => find(id).unread = true);
+      toast(todo.length === 1 ? 'Marked as unread' : `${todo.length} marked as unread`, 'confirm');
+    } else if (kind === 'delete') {
+      const ok = await N.call('sms.delete', { ids });
+      if (!ok) throw new Error(`The ${w} didn’t delete them.`);
+      S.msgs = S.msgs.filter(x => !ids.includes(x.id));
+      toast(ids.length === 1 ? `Deleted from the ${w}` : `${ids.length} deleted from the ${w}`, 'confirm');
+    }
+    S.sel = null; renderMsgs(); badge();
+  } catch (e) { fail(e); }
 }
 
 function openMsg(id) {
@@ -504,19 +562,32 @@ function composeSheet(to = '') {
   setTimeout(() => $(to ? '#sm-text' : '#sm-to')?.focus(), 300);
 }
 
-// ---------- balance codes (USSD) ----------
-function ussdForm(idp) {
-  const code = balanceCode();
-  return `<div class="field"><label for="${idp}-ussd">Code</label><input id="${idp}-ussd" name="ussd" value="${esc(code)}" placeholder="*123#" inputmode="tel" autocomplete="off" spellcheck="false"></div>
-    <button class="btn wide" data-act="ussd">Send code</button><div class="ussd-out mute" data-ussdout>The reply from your network shows here.</div>`;
+// ---------- USSD: balance and other network codes ----------
+/** The USSD tab: check balance first, then codes used before, then any code. */
+function renderUssd() {
+  const el = $('[data-ussd]'), w = what(), bal = balanceCode(), here = viewIsHere();
+  const recent = (S.ui.ussdRecent || []).filter(c => c !== bal).slice(0, 4);
+  const row = (code, title, sub) => `<button class="li" data-ussdgo="${esc(code)}"${here ? '' : ' disabled'}><div class="t"><b>${title}</b><span>${sub}</span></div>${chev}</button>`;
+  el.innerHTML = `<h3 class="scr">USSD</h3>
+    <div class="list">${bal ? row(bal, 'Check balance', `Sends ${esc(bal)}`)
+      : `<button class="li" data-act="balcode"><div class="t"><b>Check balance</b><span>Add your network’s balance code once</span></div>${chev}</button>`}${recent.map(c => row(c, esc(c), 'Sent before')).join('')}</div>
+    ${bal ? '<button class="raw" style="margin-top:var(--s-2)" data-act="balcode">Change the balance code</button>' : ''}
+    <div class="sec">Send a code</div>
+    <div class="field"><label for="us-ussd">Code</label><input id="us-ussd" name="ussd" value="" placeholder="${esc(bal || '*123#')}" inputmode="tel" autocomplete="off" spellcheck="false"></div>
+    <button class="btn wide" data-act="ussd"${here ? '' : ' disabled'}>Send code</button>
+    <div class="ussd-out mute" data-ussdout aria-live="polite">${here ? 'The reply from your network shows here.' : `Join the ${w}’s Wi-Fi to send a code.`}</div>
+    <p class="mp-note">Sent from the ${w}’s SIM to your network, the same as dialling it on a phone.</p>`;
 }
 
-async function runUssd(btn) {
-  const root = btn.closest('[data-sheetbody], [data-pset]');
-  const input = $('input[name=ussd]', root), out = $('[data-ussdout]', root), code = input.value.trim();
+async function runUssd(btn, given) {
+  const root = btn.closest('[data-ussd]');
+  const input = $('input[name=ussd]', root), out = $('[data-ussdout]', root), code = (given || input.value).trim();
+  if (given) input.value = given;
   if (!/^[*#0-9]+$/.test(code)) { out.textContent = 'A code is made of digits, * and #.'; return; }
   if (!viewIsHere()) { out.textContent = `Join the ${what()}’s Wi-Fi first.`; return; }
-  S.ui.ussd = code; saveUi();
+  if (code !== balanceCode()) { S.ui.ussdRecent = [code, ...(S.ui.ussdRecent || []).filter(c => c !== code)].slice(0, 6); }
+  saveUi();
+  out.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   btn.classList.add('busy'); out.classList.remove('mute'); out.textContent = 'Sending…';
   try { out.textContent = isRouter() ? await ussdRouter(code) : await ussdMifi(code); haptic('confirm'); }
   catch (e) { out.textContent = e.code === 'signin' ? `Sign in to the ${what()} first.` : e.message; haptic('reject'); }
@@ -585,9 +656,27 @@ function slots(per) {
   return { out, axis: [`${MON[since.getMonth()]} ${since.getFullYear()}`, '', `${MON[m]} ${y}`], aria: 'Data used each month since recording started' };
 }
 
-async function loadUsage() {
+// The period picker's lens glides to the pick, the same motion as the tab bar's.
+const perEl = $('[data-uperiod]'), perLens = document.createElement('span');
+perLens.className = 'seg-lens'; perLens.setAttribute('aria-hidden', 'true'); perEl.prepend(perLens); perEl.classList.add('lensed');
+function perLensTo(glide) {
+  const b = $('[aria-pressed="true"]', perEl);
+  if (!b || !b.offsetWidth) return; // the Usage screen is hidden: placed when it shows
+  if (!glide || !perEl.dataset.lens) perEl.dataset.lensJump = '';
+  perEl.style.setProperty('--lens-x', `${b.offsetLeft}px`); perEl.style.setProperty('--lens-w', `${b.offsetWidth}px`);
+  perEl.dataset.lens = 'on';
+  if ('lensJump' in perEl.dataset) { perLens.getBoundingClientRect(); requestAnimationFrame(() => delete perEl.dataset.lensJump); }
+}
+new ResizeObserver(() => perLensTo(false)).observe(perEl);
+
+async function loadUsage(glide) {
   const id = viewId();
   $$('[data-u]').forEach(b => b.setAttribute('aria-pressed', b.dataset.u === S.per));
+  perLensTo(glide === true);
+  if (id && viewIsHere() && (!S.blocksAt || Date.now() - S.blocksAt > 60000)) {
+    S.blocksAt = Date.now();
+    loadBlocks().then(() => { if (S.tab === 'usage' && S.usage) renderUsage(S.usage); });
+  }
   if (!id) { renderUsage(null); return; }
   try {
     const [info, me] = await Promise.all([N.call('usage.info'), N.call('usage.me', { dev: id })]);
@@ -602,7 +691,7 @@ async function loadUsage() {
 function renderUsage(U) {
   const q = k => $(`[data-q="${k}"]`), w = what(), name = esc(devName());
   q('u-restsub').textContent = `The ${w} counts these together`;
-  q('u-note').textContent = `Every device that joins is recorded and kept until you clear it. Only this phone’s data is exact. The ${w} counts the rest together, so other devices show the least and most they could have used.`;
+  q('u-note').textContent = `Every device that joins is recorded and kept until you clear it. The ${w} counts data for all devices together, not each one, so this phone’s data is exact and other devices show how long they were on. “At least” is what one used while it was the only other device on.`;
   if (!U) {
     q('u-total').textContent = '—'; q('u-sub').textContent = 'Nothing recorded yet. The app records while your phone is on the box’s Wi-Fi.';
     q('u-read').textContent = ''; q('u-chart').innerHTML = ''; q('u-axis').innerHTML = '';
@@ -617,20 +706,33 @@ function renderUsage(U) {
     return r.reduce((a, x) => a + x[1], 0);
   });
   const total = rows.reduce((a, x) => a + x[1], 0), phone = Math.min(total, rows.reduce((a, x) => a + x[2], 0));
-  q('u-total').textContent = fmt(total);
-  q('u-sub').textContent = `${PW[S.per][0].toUpperCase()}${PW[S.per].slice(1)} on ${devName()}${rows.length ? '' : '. Nothing recorded for this period'}`;
-  q('u-phone').textContent = fmt(phone); q('u-rest').textContent = fmt(total - phone);
-  q('u-phonebar').style.width = total ? `${phone / total * 100}%` : '0';
-  q('u-restbar').style.width = total ? `${(total - phone) / total * 100}%` : '0';
+  // This month comes from the box's own counter, which ran before the app did. Other periods are the app's record.
+  const boxMonth = S.per === 'month' && viewIsHere() ? status().monthBytes : null;
+  const fromBox = boxMonth != null && boxMonth >= total, shown = fromBox ? boxMonth : total;
+  if (fromBox) {
+    const from = S.info?.since ? new Date(S.info.since) : null, sd = +status().raw?.startDate;
+    q('u-total').textContent = fmt(boxMonth);
+    q('u-sub').textContent = `This month, counted by the ${w}${sd > 1 ? ` since its reset on the ${ord(sd)}` : ''}. The app recorded ${fmt(total)} of it${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;
+  } else {
+    q('u-total').textContent = fmt(total);
+    q('u-sub').textContent = `${PW[S.per][0].toUpperCase()}${PW[S.per].slice(1)} on ${devName()}, recorded by the app${rows.length ? '' : '. Nothing recorded for this period'}`;
+  }
+  q('u-phone').textContent = fmt(phone); q('u-rest').textContent = fmt(shown - phone);
+  q('u-restsub').textContent = fromBox && boxMonth > total ? `All other use, including before the app started recording` : `The ${w} counts these together`;
+  q('u-phonebar').style.width = shown ? `${phone / shown * 100}%` : '0';
+  q('u-restbar').style.width = shown ? `${(shown - phone) / shown * 100}%` : '0';
   q('u-axis').innerHTML = sl.axis.map(a => `<span>${esc(a)}</span>`).join('');
   drawChart(sl, vals);
 
   const on = new Set(viewIsHere() ? (status().clients || []).map(c => c.mac) : []);
+  // The box counts every device together, so only this phone gets a data figure. The others show what really
+  // differs between them: how long each was on, and the least it used when that can be told apart.
   const devRow = d => {
-    const self = d.mac === S.me;
-    const v = !d.onlineSec ? 'None' : self ? fmt(phone) : rng(d.lo, d.hi);
-    const now = on.has(d.mac);
-    const sub = d.onlineSec ? `${now ? 'On now, ' : ''}${hrs(d.onlineSec)} online` : `${now ? 'On now. ' : ''}Not on ${PW[S.per]}`;
+    const self = d.mac === S.me, now = on.has(d.mac), blocked = !self && isBlocked(d.mac);
+    const v = self ? (d.onlineSec ? fmt(phone) : 'None') : d.onlineSec ? hrs(d.onlineSec) : 'None';
+    const data = self ? 'Counted exactly by Android' : d.lo > 0 ? `At least ${fmt(d.lo)}` : `Data counted with the others`;
+    const sub = blocked ? 'Blocked from the Wi-Fi'
+      : d.onlineSec ? `${now ? 'On now. ' : ''}${data}` : `${now ? 'On now. ' : ''}Not on ${PW[S.per]}`;
     const nm = d.alias || d.name || (self ? 'This phone' : 'Unknown device');
     return `<button class="li u-dev" data-rec="${esc(d.mac)}"><span class="on-dot${now ? '' : ' off'}" ${now ? 'aria-label="On now"' : 'aria-hidden="true"'}></span><div class="t"><b>${esc(nm)}</b><span>${sub}</span></div><span class="v num">${v}</span></button>`;
   };
@@ -679,20 +781,133 @@ async function recSheet(mac) {
   } catch { /* shows zeros */ }
   const rows = S.usage.rows, phone = Math.min(rows.reduce((a, x) => a + x[1], 0), rows.reduce((a, x) => a + x[2], 0));
   const on = viewIsHere() && (status().clients || []).some(c => c.mac === mac);
-  const data = !d.onlineSec ? 'None' : self ? fmt(phone) : rng(d.lo, d.hi);
+  const data = !d.onlineSec ? 'None' : self ? fmt(phone) : d.lo > 0 ? `At least ${fmt(d.lo)}` : 'Not known';
   const nm = d.alias || d.name || (self ? 'This phone' : 'Unknown device');
   const note = self ? 'Android counts this phone’s data exactly.'
-    : `The ${what()} counts data for all devices together. The least is what it carried while this was the only device on besides this phone; the most is everything it carried while this was on.`;
+    : `The ${what()} counts data for all devices together, not for each one. “At least” is what it carried while this was the only device on besides this phone. While others were on too, its share can’t be told apart.`;
   const extra = d.name ? '' : `It gave no name. Its hardware address ends in ${esc(mac.slice(-5))}. `;
   const lbl = Array.from({ length: 7 }, (_, i) => DOW[new Date(start.getTime() + i * 864e5).getDay()]);
   S.rec = mac;
   openSheet(`<h3 class="scr">${esc(nm)}</h3>
-    <div class="list">${tog('This is mine', 'Moves it between Yours and Others', d.mine || self, 'mine', 'rec')}${val('First seen', seenAt(d.first))}${val('Last seen', on ? 'On now' : seenAt(d.last))}${val(`Data, ${PW[S.per]}`, `<span class="num">${data}</span>`, self ? 'Exact' : 'Least to most')}${val(`Online, ${PW[S.per]}`, `<span class="num">${d.onlineSec ? hrs(d.onlineSec) : 'None'}</span>`)}</div>
+    <div class="list">${tog('This is mine', 'Moves it between Yours and Others', d.mine || self, 'mine', 'rec')}${val('First seen', seenAt(d.first))}${val('Last seen', on ? 'On now' : seenAt(d.last))}${val(`Data, ${PW[S.per]}`, `<span class="num">${data}</span>`, self ? 'Exact' : '')}${isBlocked(mac) ? val('Wi-Fi', 'Blocked') : ''}${val(`Online, ${PW[S.per]}`, `<span class="num">${d.onlineSec ? hrs(d.onlineSec) : 'None'}</span>`)}</div>
     <div class="sec">Hours online, last 7 days</div>
     <div class="rec-days">${days.map(s => `<i class="${s ? '' : 'z'}" style="height:${s ? Math.max(4, s / 86400 * 64).toFixed(0) : 2}px" title="${hrs(s || 60)}"></i>`).join('')}</div>
     <div class="rec-lbl">${lbl.map(x => `<span>${x}</span>`).join('')}</div>
     <p class="mp-note">${extra}${note}</p>
-    <div class="sheet-actions">${self ? '<button class="btn ghost one" data-act="renamerec">Rename</button>' : '<button class="btn ghost" data-act="renamerec">Rename</button><button class="btn danger" data-act="blockrec">Block</button>'}</div>`);
+    <div class="sheet-actions">${self ? '<button class="btn ghost one" data-act="renamerec">Rename</button>'
+      : `<button class="btn ghost" data-act="renamerec">Rename</button>${isBlocked(mac) ? '<button class="btn ghost" data-act="unblockrec">Unblock</button>' : '<button class="btn danger" data-act="blockrec">Block</button>'}`}</div>`);
+}
+
+// ---------- blocking a device from the box's Wi-Fi ----------
+// Router: the Wi-Fi block list (cmd 278), one per band, which the router keeps off while WPS is on.
+// MiFi: the Wi-Fi MAC filter (WIFI_MAC_FILTER). Every write is read back before the screen says it worked.
+const MAC = m => String(m || '').toUpperCase().replace(/-/g, ':');
+const isBlocked = mac => !!S.blocks && keptOff(S.blocks, MAC(mac));
+const BANDS = [['1', '2.4 GHz'], ['0', '5 GHz']];
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function readBlocks() {
+  if (!viewIsHere()) return null;
+  if (isRouter()) {
+    const out = {};
+    for (const [sub] of BANDS) {
+      const r = await N.call('router.call', { body: { cmd: 278, method: 'GET', subcmd: sub } });
+      const d = r.datas || {};
+      out[sub] = { mode: d.macfilter || 'close', list: (d.maclist || []).map(x => MAC(x.mac)).filter(Boolean) };
+    }
+    const wps = {};
+    for (const [sub, key] of [[0, 'wlan2g_wps_switch'], [1, 'wlan5g_wps_switch']]) {
+      wps[sub] = String((await N.call('router.call', { body: { cmd: 132, method: 'GET', subcmd: sub } }))[key]) === '1';
+    }
+    return { kind: 'router', bands: out, wps };
+  }
+  const r = await N.call('mifi.get', { cmd: 'ACL_mode,wifi_mac_black_list,wifi_hostname_black_list,wifi_mac_white_list' });
+  if (r.ACL_mode == null && r.wifi_mac_black_list == null) return { kind: 'mifi', unsupported: true };
+  const split = s => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  return { kind: 'mifi', mode: String(r.ACL_mode || '0'), black: split(r.wifi_mac_black_list).map(MAC), names: split(r.wifi_hostname_black_list), white: split(r.wifi_mac_white_list).map(MAC) };
+}
+
+/** Whether the box keeps this MAC off its Wi-Fi: on a block list, or left off an allow list. */
+function keptOff(b, mac) {
+  if (!b || b.unsupported) return false;
+  if (b.kind === 'router') return Object.values(b.bands).some(x => (x.mode === 'deny' && x.list.includes(mac)) || (x.mode === 'allow' && !x.list.includes(mac)));
+  return (b.mode === '2' && b.black.includes(mac)) || (b.mode === '1' && !b.white.includes(mac));
+}
+
+async function loadBlocks() {
+  try { S.blocks = await readBlocks(); } catch { S.blocks = null; }
+}
+
+async function setBlock(mac, block, name) {
+  mac = MAC(mac);
+  const b = await readBlocks();
+  if (!b) throw new Error(`Join the ${what()}’s Wi-Fi first.`);
+  if (b.kind === 'router') {
+    // The router refuses a block list while WPS is on.
+    if (block) for (const sub of [0, 1]) if (b.wps[sub]) {
+      const r = await N.call('router.call', { body: { cmd: 132, method: 'POST', subcmd: sub, [sub ? 'wlan5g_wps_switch' : 'wlan2g_wps_switch']: '0' } });
+      if (String(r.message) !== '0') throw new Error('The router didn’t turn WPS off, so it can’t block yet.');
+      await wait(6000);
+    }
+    for (const [sub] of BANDS) {
+      const { mode, list } = b.bands[sub];
+      let datas;
+      if (mode === 'allow') { // a white list: being off it is what keeps a device out
+        const next = block ? list.filter(m => m !== mac) : [...new Set([...list, mac])];
+        datas = { macfilter: 'allow', maclist: next.map(m => ({ mac: m })) };
+      } else {
+        const cur = mode === 'deny' ? list : [];
+        const next = block ? [...new Set([...cur, mac])] : cur.filter(m => m !== mac);
+        if (next.length > 32) throw new Error('The router’s block list is full (32 devices).');
+        datas = next.length ? { macfilter: 'deny', maclist: next.map(m => ({ mac: m })) } : { macfilter: 'close', maclist: [] };
+      }
+      const r = await N.call('router.call', { body: { cmd: 278, method: 'POST', subcmd: sub, datas, success: true } });
+      if (r.message && r.message !== '0') throw new Error('The router said no to the change.');
+    }
+    await wait(7000); // the router restarts its Wi-Fi to apply it
+  } else {
+    if (b.unsupported) throw new Error('This MiFi doesn’t offer blocking through its web API.');
+    let params;
+    if (b.mode === '1') {
+      const next = block ? b.white.filter(m => m !== mac) : [...new Set([...b.white, mac])];
+      params = { ACL_mode: '1', wifi_mac_white_list: next.join(';') };
+    } else {
+      const list = b.mode === '2' ? b.black : [], names = b.mode === '2' ? b.names : [];
+      const keep = list.map((m, i) => [m, names[i] || '']).filter(([m]) => m !== mac);
+      if (block) keep.push([mac, (name || '').replace(/;/g, ' ').slice(0, 32)]);
+      params = { ACL_mode: keep.length ? '2' : '0', wifi_mac_black_list: keep.map(x => x[0]).join(';'), wifi_hostname_black_list: keep.map(x => x[1]).join(';') };
+    }
+    const r = await N.call('mifi.set', { goformId: 'WIFI_MAC_FILTER', params });
+    if (!done(r)) throw new Error('The MiFi said no to the change.');
+    await wait(3000);
+  }
+  S.blocks = await readBlocks();
+  if (keptOff(S.blocks, mac) !== block) throw new Error(`The ${what()} didn’t take it. It still ${block ? 'lets it on' : 'keeps it off'}.`);
+}
+
+async function blockAsk(block) {
+  const mac = S.rec, d = S.usage?.devs.find(x => x.mac === mac), w = what();
+  if (!mac || mac === S.me) return;
+  const nm = d?.alias || d?.name || 'this device';
+  let b;
+  try { b = await readBlocks(); } catch (e) { return fail(e); }
+  if (!b) return toast(`Join the ${w}’s Wi-Fi to ${block ? 'block' : 'unblock'} it.`);
+  if (b.unsupported) return toast('This MiFi doesn’t offer blocking through its web API.', 'reject');
+  const wpsOn = b.kind === 'router' && (b.wps[0] || b.wps[1]);
+  const text = block
+    ? `${esc(nm)} can’t join the ${w}’s Wi-Fi until you unblock it here.${b.kind === 'router' ? ` The Wi-Fi restarts for a few seconds, so your devices drop and reconnect.${wpsOn ? ' This also turns off WPS, which the router keeps off while blocking.' : ''}` : ''}`
+    : `${esc(nm)} can join the ${w}’s Wi-Fi again.${b.kind === 'router' ? ' The Wi-Fi restarts for a few seconds.' : ''}`;
+  ask({
+    title: block ? `Block ${esc(nm)}?` : `Unblock ${esc(nm)}?`, text, yes: block ? 'Block' : 'Unblock', danger: block,
+    then: async () => {
+      toast(block ? 'Blocking…' : 'Unblocking…');
+      try {
+        await setBlock(mac, block, d?.alias || d?.name);
+        haptic('confirm'); toast(block ? `${nm} is blocked` : `${nm} can join again`, 'confirm');
+        if (S.usage) renderUsage(S.usage);
+      } catch (e) { fail(e); }
+    },
+  });
 }
 
 // ---------- settings ----------
@@ -746,7 +961,6 @@ function setIndex() {
     <div class="sec">Internet</div><div class="list">
       ${lnk('conn', 'Connection', live && s.connected !== false ? `${esc(s.provider || 'Mobile network')}${up ? `, up ${dur(up)}` : ''}` : 'Not connected', live ? (s.connected === false ? 'Off' : 'On') : '')}
       ${lnk('net', 'Network and APN', m ? `${word(NETMODE, S.D.net_select, 'Mode')}, ${dv('profile_name', dv('m_profile_name', 'APN'))}` : 'Mode and APN')}
-      ${lnk('ussd', 'Check balance', 'Send a network code, read the reply')}
     </div>
     <div class="sec">Wi-Fi</div><div class="list">
       ${m ? lnk('wifi', 'Name and password', `${dv('SSID1', esc(s.ssid || 'Wi-Fi'))}, ${dv('AuthMode', 'WPA2').replace('PSK', '').replace('WPA2WPA3', 'WPA2/3')}`)
@@ -805,7 +1019,6 @@ function setPageHtml(k) {
         <div class="mp-actions"><button class="btn ghost" data-act="raw">Add a profile on the MiFi’s page</button></div>`
       : back('Network and APN') + `<div class="list">${val('Network', esc(s.network || '—'))}${val('Operator', esc(s.provider || '—'))}${val('APN', rv(248, ['apn', 'APN', 'apn_name', 'profile_apn']))}</div>
         <p class="mp-note">${PENDING}</p><div class="mp-actions"><button class="btn ghost" data-act="raw">Open the router’s page</button></div>`,
-    ussd: () => back('Check balance') + ussdForm('ps'),
     wifi: () => m
       ? back('Name and password') + `<div class="list">${val('Network name', dv('SSID1', esc(s.ssid || '—')))}
           <div class="li"><div class="t"><b>Password</b><span>${dv('AuthMode', 'WPA2').replace('PSK', '')}, the usual kind</span></div><span class="v num" data-pw>••••••••</span><button class="btn ghost sm" data-act="showpw">Show</button></div>
@@ -948,6 +1161,13 @@ document.addEventListener('click', e => {
   const go = t.closest('[data-go]'); if (go) return nav(go.dataset.go);
   const ps = t.closest('[data-ps]'); if (ps) return setPage(ps.dataset.ps);
   const mg = t.closest('[data-msg]'); if (mg) return openMsg(mg.dataset.msg);
+  const ug = t.closest('[data-ussdgo]'); if (ug) return runUssd(ug, ug.dataset.ussdgo);
+  const pk = t.closest('[data-pick]');
+  if (pk) {
+    const id = pk.dataset.pick;
+    S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id);
+    haptic('tick'); return renderMsgs();
+  }
   const rc = t.closest('[data-rec]'); if (rc) return recSheet(rc.dataset.rec);
   const dvb = t.closest('[data-dev]');
   if (dvb) {
@@ -956,7 +1176,7 @@ document.addEventListener('click', e => {
     return;
   }
   const up = t.closest('[data-u]');
-  if (up) { S.per = up.dataset.u; S.ui.per = S.per; saveUi(); return loadUsage(); }
+  if (up) { S.per = up.dataset.u; S.ui.per = S.per; saveUi(); haptic('tick'); return loadUsage(true); }
   const sg = t.closest('[data-seg]');
   if (sg) {
     const k = sg.dataset.seg, v = sg.dataset.v;
@@ -982,6 +1202,13 @@ document.addEventListener('click', e => {
   act(a.dataset.act, a);
 });
 
+// A long press on a text starts picking, with that text picked.
+document.addEventListener('contextmenu', e => {
+  const mg = e.target.closest('[data-msg]'); if (!mg) return;
+  e.preventDefault();
+  S.sel = new Set([mg.dataset.msg]); haptic('tick'); renderMsgs();
+});
+
 document.addEventListener('submit', e => {
   const f = e.target.closest('[data-signin]'); if (!f) return;
   e.preventDefault(); signIn(f);
@@ -999,8 +1226,31 @@ function act(k, el) {
     case 'raw': return N.call('openOriginal');
     case 'github': return S.upd?.repo && N.call('openUrl', { url: `https://github.com/${S.upd.repo}` });
     case 'msgback': return openMsg(null);
-    case 'ussdsheet': return openSheet('<h3 class="scr">Check balance</h3>' + ussdForm('sh'));
+    case 'selstart': S.sel = new Set(); return renderMsgs();
+    case 'selend': return selEnd();
+    case 'selall': S.sel = S.sel.size === S.msgs.length ? new Set() : new Set(S.msgs.map(x => x.id)); return renderMsgs();
+    case 'readall': return selDo('read', S.msgs.filter(x => x.unread && !x.outgoing).map(x => x.id));
+    case 'selread': return selDo('read');
+    case 'selunread': return selDo('unread');
+    case 'seldel': {
+      const n = S.sel.size;
+      return ask({
+        title: n === 1 ? 'Delete this text?' : `Delete ${n} texts?`, text: `${n === 1 ? 'It’s' : 'They’re'} removed from the ${w}. This can’t be undone.`, yes: 'Delete',
+        then: () => selDo('delete'),
+      });
+    }
+    case 'unreadmsg': { const id = S.msg; S.msg = null; return selDo('unread', [id]); }
     case 'ussd': return runUssd(el);
+    case 'balcode': {
+      openSheet(`<h3 class="scr">Balance code</h3><div class="field"><label for="bc">Code</label><input id="bc" name="bc" inputmode="tel" autocomplete="off" spellcheck="false" placeholder="*310#" value="${esc(balanceCode())}"></div>
+        <button class="btn wide" data-act="savebal">Save the code</button><p class="mp-note">Check balance sends this code. Your network’s website or SIM pack lists it.</p>`);
+      return setTimeout(() => $('#bc')?.focus(), 300);
+    }
+    case 'savebal': {
+      const v = $('#bc').value.trim();
+      if (!/^[*#0-9]+$/.test(v)) return toast('A code is made of digits, * and #.');
+      S.ui.ussd = v; saveUi(); closeSheet(); renderUssd(); return toast('Saved', 'confirm');
+    }
     case 'newsms': return composeSheet('');
     case 'reply': { const m = S.msgs?.find(x => x.id === S.msg); return composeSheet(m?.number || ''); }
     case 'sendsms': {
@@ -1028,10 +1278,8 @@ function act(k, el) {
     }
     case 'saverecname': return N.call('usage.rename', { dev: viewId(), mac: S.rec, name: $('#rn').value.trim() })
       .then(() => { closeSheet(); toast('Renamed', 'confirm'); loadUsage(); }).catch(fail);
-    case 'blockrec': return ask({
-      title: 'Block this device?', text: `Blocking from the app comes in a screen update, once it has been checked on a real ${w}. Open the ${w}’s own page to block it now.`,
-      yes: `Open the ${w}’s page`, danger: false, then: () => N.call('openOriginal'),
-    });
+    case 'blockrec': return blockAsk(true);
+    case 'unblockrec': return blockAsk(false);
     case 'export': return N.call('usage.export').catch(fail);
     case 'clearrec': return ask({
       title: 'Clear the usage record?', text: 'Every hour’s data and every device the app has recorded, for all your devices, is erased from this phone.', yes: 'Clear everything',
@@ -1107,6 +1355,7 @@ function onState(s) {
   if (!out && S.prefs && !S.prefs.notifications && !S.ui.askedNotif) { S.ui.askedNotif = 1; saveUi(); N.call('notif.request').catch(() => {}); }
   paintNow(); badge(); wantLive(); loadToday();
   if (S.tab === 'settings' && S.page === 'index') setPage('index', true);
+  if (S.tab === 'ussd' && S.ussdHere !== viewIsHere()) { S.ussdHere = viewIsHere(); renderUssd(); }
   if (!prevNeeds && s.needsSignIn && S.tab === 'settings') setPage('index', true);
 }
 
@@ -1135,6 +1384,7 @@ N.on('update', d => {
 });
 N.on('back', () => {
   if (sheetOpen()) return closeSheet();
+  if (S.tab === 'msgs' && S.sel) return selEnd();
   if (S.tab === 'msgs' && S.msg) return openMsg(null);
   if (S.tab === 'settings' && S.page !== 'index') return setPage('index');
   if (S.tab !== 'now') return nav('now');

@@ -172,14 +172,28 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             }
 
             // The box lists by its storage number, which isn't the order texts arrived in: newest first by date.
-            "sms.list" -> JSONArray(d.session { it.messages(a.optInt("limit", 60)) }.sortedByDescending { it.time }.map { it.toJson() })
+            "sms.list" -> {
+                val kept = keptUnread()
+                JSONArray(d.session { it.messages(a.optInt("limit", 60)) }.sortedByDescending { it.time }.map {
+                    (if (!it.unread && !it.outgoing && it.id in kept) it.copy(unread = true) else it).toJson()
+                })
+            }
             "sms.read" -> {
                 val ids = ids(a)
+                keepUnread(keptUnread() - ids.toSet())
                 val ok = d.session { it.markRead(ids) }
                 Notifier.clearSms(app, ids)
                 ok
             }
-            "sms.delete" -> d.session { it.delete(ids(a)) }
+            // Neither box can mark a text unread again, so the app keeps that mark on this phone.
+            "sms.unread" -> { keepUnread(keptUnread() + ids(a)); true }
+            "sms.delete" -> {
+                val ids = ids(a)
+                val ok = d.session { it.delete(ids) }
+                keepUnread(keptUnread() - ids.toSet())
+                Notifier.clearSms(app, ids)
+                ok
+            }
             "sms.send" -> d.session { it.send(a.getString("number"), a.getString("text")) }
 
             "usage.hours" -> app.usage.hours(dev(a), a.getLong("from"), a.getLong("to"))
@@ -215,6 +229,15 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             "battery.isExempt" -> host.batteryExempt()
             else -> throw IllegalArgumentException("Unknown call $m")
         }
+    }
+
+    /** Texts the owner marked unread, per box, as message ids. */
+    private fun keptUnread(): Set<String> =
+        app.devices.id?.let { app.prefs.getString("unread:$it") }?.split('\n')?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
+
+    private fun keepUnread(ids: Set<String>) {
+        val id = app.devices.id ?: return
+        app.prefs.putString("unread:$id", ids.joinToString("\n"))
     }
 
     private fun prefs(): JSONObject {
