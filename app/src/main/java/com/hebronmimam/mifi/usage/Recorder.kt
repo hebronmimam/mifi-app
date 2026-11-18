@@ -47,6 +47,17 @@ object Attribution {
     private const val HOUR_MS = 3_600_000L
 
     /**
+     * The calendar month ("2026-11") a box's own month count belongs to, or null when that can't be told:
+     * the box resets on another day of the month, or it is the first hours of the 1st and may not have reset yet.
+     */
+    fun monthOf(ms: Long, resetDay: Int?): String? {
+        if (resetDay != null && resetDay > 1) return null
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = ms }
+        if (c.get(java.util.Calendar.DAY_OF_MONTH) == 1 && c.get(java.util.Calendar.HOUR_OF_DAY) < 2) return null
+        return "%04d-%02d".format(c.get(java.util.Calendar.YEAR), c.get(java.util.Calendar.MONTH) + 1)
+    }
+
+    /**
      * What the box carried between two readings, split over the hours in between by time.
      * The phone being away for the night must not land the whole night in the hour it came back.
      */
@@ -136,5 +147,12 @@ class Recorder(private val db: UsageDb) {
             w.endTransaction()
         }
         s.tempC?.let { if (it > -40 && it < 150) db.addTemp(dev, hour, it) }
+        // The box forgets each month when the next starts, so keep the most it showed for every month.
+        val mb = s.monthBytes
+        val mk = Attribution.monthOf(now, s.raw.optString("startDate").toIntOrNull())
+        if (mb != null && mb > 0 && mk != null) {
+            val key = "m:$dev:$mk"
+            if (mb > (db.meta(key)?.toLongOrNull() ?: 0)) db.setMeta(key, mb.toString())
+        }
     }
 }

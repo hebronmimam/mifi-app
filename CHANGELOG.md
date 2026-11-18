@@ -2,6 +2,11 @@
 
 All notable changes to this app. Versions follow [semantic versioning](https://semver.org).
 
+## [1.1.4] - 2026-11-18
+
+- Usage: the app now keeps the box's own count for every month, not just the month in progress. The box forgets a month when the next one starts, so before this, a month's total in Year and All would drop back to what the app recorded once that month ended.
+- The box keeps no total from before this month, so Year and All can't show earlier months the app wasn't there for.
+
 ## [1.1.3] - 2026-11-17
 
 - Usage: Year and All now include everything the box counted this month, not only what the app recorded since it was installed. Before, a year could show less than its own month. When the box's month starts on the 1st, this month's bar is the box's own count, and the line under the total says so.

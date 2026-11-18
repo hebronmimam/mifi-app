@@ -197,6 +197,7 @@ class Bridge(private val app: MiFiApp, private val web: WebView, private val hos
             "sms.send" -> d.session { it.send(a.getString("number"), a.getString("text")) }
 
             "usage.hours" -> app.usage.hours(dev(a), a.getLong("from"), a.getLong("to"))
+            "usage.months" -> app.usage.months(dev(a))
             "usage.devices" -> app.usage.devices(dev(a), a.getLong("from"), a.getLong("to"))
             "usage.client" -> app.usage.clientHours(dev(a), a.getString("mac"), a.getLong("from"), a.getLong("to"))
             "usage.temps" -> app.usage.temps(dev(a), a.getLong("from"), a.getLong("to"))

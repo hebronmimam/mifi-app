@@ -682,8 +682,9 @@ async function loadUsage(glide) {
     const [info, me] = await Promise.all([N.call('usage.info'), N.call('usage.me', { dev: id })]);
     S.info = info; S.me = me;
     const sl = slots(S.per), from = sl.out[0].a, to = sl.out[sl.out.length - 1].b;
-    const [rows, devs] = await Promise.all([N.call('usage.hours', { dev: id, from, to }), N.call('usage.devices', { dev: id, from, to })]);
-    S.usage = { sl, rows, devs };
+    const [rows, devs, months] = await Promise.all([N.call('usage.hours', { dev: id, from, to }), N.call('usage.devices', { dev: id, from, to }),
+      N.call('usage.months', { dev: id }).catch(() => ({}))]);
+    S.usage = { sl, rows, devs, months };
     renderUsage(S.usage);
   } catch (e) { renderUsage(null, e); }
 }
@@ -701,15 +702,24 @@ function renderUsage(U) {
   const { sl, rows, devs } = U, since = S.info?.since ? H(S.info.since) : Infinity;
   const from = S.info?.since ? new Date(S.info.since) : null, sd = +status().raw?.startDate;
   const boxNow = viewIsHere() ? status().monthBytes : null;
-  // A year (or everything) holds this month, and the box counted this month from before the app did. When the box's
-  // month starts on the 1st, the two line up, so this month's share is the box's figure, not just the app's record.
+  // The box counts each month itself, from before the app started, and forgets it when the next month starts. The app
+  // keeps the most the box showed for every month (when the box's month starts on the 1st, so the two line up), and a
+  // year or everything uses that count for each of those months instead of only what the app recorded.
+  const boxMonths = { ...(U.months || {}) }, now = new Date(), thisMonth = `${now.getFullYear()}-${two(now.getMonth() + 1)}`;
+  if (boxNow != null && !(sd > 1)) boxMonths[thisMonth] = Math.max(boxMonths[thisMonth] || 0, boxNow);
   let extra = 0;
-  if (boxNow != null && (S.per === 'year' || S.per === 'all') && !(sd > 1)) {
-    const now = new Date(), m0 = H(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
-    extra = Math.max(0, boxNow - rows.filter(x => x[0] >= m0).reduce((a, x) => a + x[1], 0));
+  const adds = new Map(), counted = [];
+  if (S.per === 'year' || S.per === 'all') {
+    for (const [k, b] of Object.entries(boxMonths).sort()) {
+      const [yy, mm] = k.split('-').map(Number), a = H(new Date(yy, mm - 1, 1).getTime()), z = H(new Date(yy, mm, 1).getTime());
+      const slot = sl.out.find(s => s.a <= a && a < s.b);
+      if (!slot) continue;
+      const x = Math.max(0, b - rows.filter(r => r[0] >= a && r[0] < z).reduce((t, r) => t + r[1], 0));
+      if (x) { adds.set(slot, (adds.get(slot) || 0) + x); extra += x; counted.push(MON[mm - 1]); }
+    }
   }
   const vals = sl.out.map(s => {
-    const add = s.live ? extra : 0;
+    const add = adds.get(s) || 0;
     if (s.future || (s.b <= since && !add)) return undefined;
     const r = rows.filter(x => x[0] >= s.a && x[0] < s.b);
     if (!r.length) return add || (s.live ? undefined : null);
@@ -721,7 +731,7 @@ function renderUsage(U) {
   const fromBox = boxMonth != null && boxMonth >= total, shown = fromBox ? boxMonth : total;
   if (extra) {
     q('u-total').textContent = fmt(total);
-    q('u-sub').textContent = `${S.per === 'all' ? 'Everything' : 'This year'} on ${devName()}. ${MON[new Date().getMonth()]} is the ${w}’s own count; the app recorded the rest${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;
+    q('u-sub').textContent = `${S.per === 'all' ? 'Everything' : 'This year'} on ${devName()}. ${counted.length > 1 ? `${counted.slice(0, -1).join(', ')} and ${counted.at(-1)} are` : `${counted[0]} is`} the ${w}’s own count; the app recorded the rest${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;
   } else if (fromBox) {
     q('u-total').textContent = fmt(boxMonth);
     q('u-sub').textContent = `This month, counted by the ${w}${sd > 1 ? ` since its reset on the ${ord(sd)}` : ''}. The app recorded ${fmt(total)} of it${from ? ` since ${from.getDate()} ${MON[from.getMonth()]}` : ''}.`;

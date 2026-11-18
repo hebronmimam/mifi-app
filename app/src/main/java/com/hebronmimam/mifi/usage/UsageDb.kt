@@ -113,6 +113,13 @@ class UsageDb(ctx: Context) : SQLiteOpenHelper(ctx, "usage.db", null, 2) {
         ).use { c -> while (c.moveToNext()) out.put(JSONArray().put(c.getLong(0)).put(c.getDouble(1)).put(c.getDouble(2))) }
     }
 
+    /** The box's own count for each calendar month it was seen in: {"2026-11": bytes, …}. */
+    fun months(dev: String): JSONObject = JSONObject().also { out ->
+        readableDatabase.rawQuery("SELECT k, v FROM meta WHERE k LIKE ?", arrayOf("m:$dev:%")).use { c ->
+            while (c.moveToNext()) c.getString(1).toLongOrNull()?.let { out.put(c.getString(0).substringAfterLast(':'), it) }
+        }
+    }
+
     fun setMine(dev: String, mac: String, mine: Boolean) {
         writableDatabase.execSQL("UPDATE clients SET mine=? WHERE dev=? AND mac=?", arrayOf(if (mine) 1 else 0, dev, mac))
     }

@@ -54,6 +54,17 @@ class LogicTest {
         assertEquals(listOf(7L to 42L), Attribution.spread(7 * h + 60_000, 7 * h + 360_000, 42))
     }
 
+    @Test fun boxMonthIsKeptOnlyWhenItLinesUpWithTheCalendar() {
+        val at = { d: Int, h: Int -> Calendar.getInstance().apply { set(2026, Calendar.DECEMBER, d, h, 30, 0) }.timeInMillis }
+        assertEquals("2026-12", Attribution.monthOf(at(15, 10), null))
+        assertEquals("2026-12", Attribution.monthOf(at(15, 10), 1))
+        // The box may not have reset yet in the first hours of the 1st: that reading could still be November's.
+        assertNull(Attribution.monthOf(at(1, 0), 1))
+        assertEquals("2026-12", Attribution.monthOf(at(1, 3), 1))
+        // A box whose month starts on the 15th spans two calendar months.
+        assertNull(Attribution.monthOf(at(20, 10), 15))
+    }
+
     @Test fun rangeIsExactWhenOneDeviceIsAlone() {
         val one = Attribution.split(box = 1000, phone = 200, others = listOf("A"))
         assertEquals(listOf(Attribution.Share("A", 800, 800)), one)
